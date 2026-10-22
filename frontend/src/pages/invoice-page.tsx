@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { InvoiceWorkspace } from "@/features/invoice/workspace";
-import { newInvoiceValues, toFormValues } from "@/features/invoice/form-mapping";
+import { duplicateValues, newInvoiceValues, toFormValues } from "@/features/invoice/form-mapping";
 import { api, ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query";
 import { NotFoundPage } from "./not-found-page";
@@ -9,7 +9,12 @@ import { PageMessage } from "./page-message";
 
 export function InvoicePage() {
   const { invoiceId } = useParams();
-  if (invoiceId === undefined) return <NewInvoice />;
+  const [searchParams] = useSearchParams();
+  if (invoiceId === undefined) {
+    const from = Number(searchParams.get("from"));
+    const sourceId = Number.isInteger(from) && from > 0 ? from : undefined;
+    return <NewInvoice key={sourceId ?? "blank"} sourceId={sourceId} />;
+  }
   const id = Number(invoiceId);
   if (!Number.isInteger(id) || id <= 0) return <NotFoundPage />;
   return <ExistingInvoice key={id} id={id} />;
@@ -37,11 +42,12 @@ function ExistingInvoice({ id }: { id: number }) {
   return <InvoiceWorkspace invoice={invoice.data} defaultValues={toFormValues(invoice.data)} />;
 }
 
-function NewInvoice() {
+/** A blank invoice, or a copy of `sourceId` when duplicating. */
+function NewInvoice({ sourceId }: { sourceId?: number }) {
   const nextNumber = useQuery({ queryKey: queryKeys.nextNumber, queryFn: api.nextNumber });
   const list = useQuery({ queryKey: queryKeys.invoices, queryFn: api.listInvoices });
-  const latestId = list.data?.[0]?.id;
-  // Business details carry over from the most recent invoice.
+  const latestId = sourceId ?? list.data?.[0]?.id;
+  // Copy the source invoice, or carry business details over from the most recent one.
   const latest = useQuery({
     queryKey: queryKeys.invoice(latestId ?? 0),
     queryFn: () => api.getInvoice(latestId!),
@@ -49,7 +55,9 @@ function NewInvoice() {
   });
 
   const loading =
-    nextNumber.isPending || list.isPending || (latestId !== undefined && latest.isPending);
+    nextNumber.isPending ||
+    (sourceId === undefined && list.isPending) ||
+    (latestId !== undefined && latest.isPending);
   if (loading) return <PageMessage loading title="Preparing a new invoice" />;
   if (nextNumber.isError)
     return (
@@ -59,5 +67,10 @@ function NewInvoice() {
         action={{ label: "Try again", onClick: () => nextNumber.refetch() }}
       />
     );
-  return <InvoiceWorkspace defaultValues={newInvoiceValues(nextNumber.data.number, latest.data)} />;
+  const number = nextNumber.data.number;
+  const values =
+    sourceId !== undefined && latest.data
+      ? duplicateValues(latest.data, number)
+      : newInvoiceValues(number, latest.data);
+  return <InvoiceWorkspace defaultValues={values} />;
 }

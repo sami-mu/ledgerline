@@ -3,8 +3,10 @@ import { CustomFieldsEditor } from "./custom-fields-editor";
 import { EditorSection } from "./editor-section";
 import { TextAreaField, TextField } from "./form-fields";
 import { LineItemsEditor } from "./line-items-editor";
+import { useDependentValidation } from "./use-dependent-validation";
 
 export function InvoiceEditor() {
+  useDependentValidation();
   return (
     <div className="@container">
       <EditorSection id="details" title="Invoice">

@@ -41,6 +41,12 @@ export function newInvoiceValues(number: string, previous?: InvoiceOut): Invoice
   };
 }
 
+/** A copy of an invoice with a new number and fresh dates. Status always starts as draft. */
+export function duplicateValues(source: InvoiceOut, number: string): InvoiceFormValues {
+  const today = isoDate(new Date());
+  return { ...toFormValues(source), number, issue_date: today, due_date: addDays(today, 14) };
+}
+
 export function toFormValues(invoice: InvoiceOut): InvoiceFormValues {
   return {
     number: invoice.number,

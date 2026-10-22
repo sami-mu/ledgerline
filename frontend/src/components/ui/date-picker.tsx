@@ -50,7 +50,8 @@ export function DatePicker({
   const [open, setOpen] = useState(false);
   const selected = parseIsoDate(value);
   const minDate = min ? parseIsoDate(min) : undefined;
-  const todayAllowed = !min || toIso(new Date()) >= min;
+  const [today] = useState(() => toIso(new Date()));
+  const todayAllowed = !min || today >= min;
 
   return (
     <Popover
@@ -93,7 +94,7 @@ export function DatePicker({
             type="button"
             disabled={!todayAllowed}
             onClick={() => {
-              onChange(toIso(new Date()));
+              onChange(today);
               setOpen(false);
             }}
             className="rounded-sm px-1.5 py-1 text-xs font-medium text-accent hover:bg-accent-soft disabled:pointer-events-none disabled:opacity-40"

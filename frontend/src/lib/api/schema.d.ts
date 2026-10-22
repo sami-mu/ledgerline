@@ -149,6 +149,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/invoices/{invoice_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore Invoice
+         * @description Undo a delete.
+         */
+        post: operations["restore_invoice_api_invoices__invoice_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/customers": {
         parameters: {
             query?: never;
@@ -832,6 +852,37 @@ export interface operations {
         };
     };
     mark_invoice_unpaid_api_invoices__invoice_id__mark_unpaid_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_invoice_api_invoices__invoice_id__restore_post: {
         parameters: {
             query?: never;
             header?: never;

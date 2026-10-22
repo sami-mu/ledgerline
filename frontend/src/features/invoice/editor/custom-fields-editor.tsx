@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip } from "@/components/ui/tooltip";
-import { useUndoToast } from "@/hooks/use-undo-toast";
 import { cn } from "@/lib/utils";
 import type { InvoiceFormValues } from "../schema";
 import { EditorSection } from "./editor-section";
@@ -23,22 +22,8 @@ const ROW_GRID =
   "grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-2 @lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_2.75rem_3.5rem]";
 
 export function CustomFieldsEditor() {
-  const { control, getValues } = useFormContext<InvoiceFormValues>();
-  const { fields, append, remove, move, insert } = useFieldArray({
-    control,
-    name: "custom_fields",
-  });
-  const offerUndo = useUndoToast();
-
-  const removeField = (index: number) => {
-    const removed = { ...getValues(`custom_fields.${index}`) };
-    remove(index);
-    offerUndo({
-      message: "Custom field removed",
-      detail: removed.label || undefined,
-      onUndo: () => insert(Math.min(index, getValues("custom_fields").length), removed),
-    });
-  };
+  const { control } = useFormContext<InvoiceFormValues>();
+  const { fields, append, remove, move } = useFieldArray({ control, name: "custom_fields" });
 
   const add = (label = "") =>
     append(
@@ -83,7 +68,7 @@ export function CustomFieldsEditor() {
                   index={index}
                   count={fields.length}
                   onMove={(to) => move(index, to)}
-                  onRemove={() => removeField(index)}
+                  onRemove={() => remove(index)}
                 />
               ))}
             </ol>

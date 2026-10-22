@@ -45,6 +45,10 @@ export function useMarkUnpaid() {
   return useInvoiceMutation((id: number) => api.markUnpaid(id));
 }
 
+export function useRestoreInvoice() {
+  return useInvoiceMutation((id: number) => api.restoreInvoice(id));
+}
+
 export function useDeleteInvoice() {
   const queryClient = useQueryClient();
   return useMutation({

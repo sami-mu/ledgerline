@@ -32,6 +32,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { ShortcutsButton } from "@/features/shortcuts/shortcuts-dialog";
 import { modKey } from "@/lib/platform";
 import type { InvoiceOut, SendInvoiceIn } from "@/lib/api/client";
+import { showUndoToast } from "@/lib/undo";
 import { cn } from "@/lib/utils";
 import { InvoiceEditor } from "./editor/invoice-editor";
 import { applyServerErrors } from "./form-errors";
@@ -49,6 +50,7 @@ import { SendInvoiceDialog } from "./send-invoice-dialog";
 import { useTotals } from "./use-totals";
 import {
   useDeleteInvoice,
+  useRestoreInvoice,
   useMarkPaid,
   useMarkUnpaid,
   useSaveInvoice,
@@ -73,11 +75,12 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
   const { isDirty } = form.formState;
   const saveMutation = useSaveInvoice(invoice?.id);
   const deleteMutation = useDeleteInvoice();
+  const restoreMutation = useRestoreInvoice();
   const sendMutation = useSendInvoice();
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const markPaidMutation = useMarkPaid();
   const markUnpaidMutation = useMarkUnpaid();
   const [sendOpen, setSendOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [confirmSentEdit, setConfirmSentEdit] = useState(false);
   const [view, setView] = useState<PaneView>("edit");
@@ -218,14 +221,30 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // Runs after the confirmation dialog; the deletion is soft, so Undo can restore it.
   const deleteInvoice = async () => {
     if (!invoice) return;
+    const { id, number } = invoice;
     try {
-      await deleteMutation.mutateAsync(invoice.id);
+      await deleteMutation.mutateAsync(id);
       allowLeave.current = true;
       setConfirmDelete(false);
-      toast.success(`Invoice ${invoice.number} deleted`);
       navigate("/invoices", { replace: true });
+      showUndoToast({
+        message: `Invoice ${number} deleted`,
+        onUndo: async () => {
+          try {
+            await restoreMutation.mutateAsync(id);
+            toast.success(`Invoice ${number} restored`, {
+              action: { label: "Open", onClick: () => navigate(`/invoices/${id}`) },
+            });
+          } catch (error) {
+            toast.error("Couldn't restore the invoice", {
+              description: error instanceof Error ? error.message : undefined,
+            });
+          }
+        },
+      });
     } catch (error) {
       toast.error("Couldn't delete the invoice", {
         description: error instanceof Error ? error.message : undefined,
@@ -448,7 +467,7 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
         onOpenChange={setConfirmDelete}
         tone="danger"
         title={`Delete invoice ${invoice?.number ?? ""}?`}
-        description="This permanently removes the invoice, its line items and custom fields. It can't be undone."
+        description="The invoice will be removed from your list. You can undo this for a few seconds afterwards."
         confirm={{
           label: "Delete invoice",
           busy: deleteMutation.isPending,

@@ -29,7 +29,7 @@ class CustomerRepository:
         """Most recently billed first. Matches anywhere in the name or email."""
         invoice_count = (
             select(func.count(Invoice.id))
-            .where(Invoice.customer_id == Customer.id)
+            .where(Invoice.customer_id == Customer.id, Invoice.deleted_at.is_(None))
             .scalar_subquery()
         )
         stmt = select(Customer, invoice_count).order_by(

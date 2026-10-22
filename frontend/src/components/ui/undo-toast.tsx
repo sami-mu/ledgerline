@@ -9,7 +9,7 @@ type Props = {
   message: string;
   detail?: string;
   seconds: number;
-  onUndo: () => void;
+  onUndo: () => void | Promise<void>;
 };
 
 /** The countdown pauses on hover or focus. */
@@ -49,7 +49,7 @@ export function UndoToast({ id, message, detail, seconds, onUndo }: Props) {
         onClick={() => {
           if (undone.current) return;
           undone.current = true;
-          onUndo();
+          void onUndo();
           toast.dismiss(id);
         }}
         className="flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-2 font-medium text-accent transition-colors hover:bg-accent-soft"

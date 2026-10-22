@@ -73,3 +73,9 @@ def mark_invoice_paid(
 @router.post("/{invoice_id}/mark-unpaid", response_model=InvoiceOut)
 def mark_invoice_unpaid(invoice_id: int, service: InvoiceServiceDep) -> InvoiceOut:
     return service.mark_unpaid(invoice_id)
+
+
+@router.post("/{invoice_id}/restore", response_model=InvoiceOut)
+def restore_invoice(invoice_id: int, service: InvoiceServiceDep) -> InvoiceOut:
+    """Undo a delete."""
+    return service.restore(invoice_id)

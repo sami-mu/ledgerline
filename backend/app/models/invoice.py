@@ -76,6 +76,10 @@ class Invoice(Base):
     # Edited since last emailed, so the customer's copy is stale.
     changed_since_sent: Mapped[bool] = mapped_column(default=False, server_default=text("0"))
     paid_on: Mapped[date | None] = mapped_column(Date, default=None)
+    # Soft delete, so a deletion can be undone. The number stays reserved.
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now

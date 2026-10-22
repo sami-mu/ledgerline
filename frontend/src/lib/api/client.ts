@@ -111,6 +111,8 @@ export const api = {
     }),
   markUnpaid: (id: number) =>
     request<InvoiceOut>(`/api/invoices/${id}/mark-unpaid`, { method: "POST" }),
+  restoreInvoice: (id: number) =>
+    request<InvoiceOut>(`/api/invoices/${id}/restore`, { method: "POST" }),
   deleteInvoice: (id: number) => request<void>(`/api/invoices/${id}`, { method: "DELETE" }),
   health: () => request<Schemas["HealthOut"]>("/api/health"),
 };

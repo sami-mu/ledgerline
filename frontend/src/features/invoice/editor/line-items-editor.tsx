@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
-import { useUndoToast } from "@/hooks/use-undo-toast";
 import { emptyLineItem } from "../form-mapping";
 import { formatCents, lineTotalCents } from "../money";
 import type { InvoiceFormValues } from "../schema";
@@ -26,19 +25,8 @@ const ROW_GRID =
   "grid grid-cols-3 gap-x-2 gap-y-2 @lg:grid-cols-[minmax(0,1fr)_3.75rem_6.25rem_5.75rem_3.5rem]";
 
 export function LineItemsEditor() {
-  const { control, getValues } = useFormContext<InvoiceFormValues>();
+  const { control } = useFormContext<InvoiceFormValues>();
   const { fields, append, remove, move, insert } = useFieldArray({ control, name: "line_items" });
-  const offerUndo = useUndoToast();
-
-  const removeLine = (index: number) => {
-    const removed = { ...getValues(`line_items.${index}`) };
-    remove(index);
-    offerUndo({
-      message: "Line removed",
-      detail: removed.description || undefined,
-      onUndo: () => insert(Math.min(index, getValues("line_items").length), removed),
-    });
-  };
   const listError = useFieldError("line_items");
 
   const addLine = () =>
@@ -115,7 +103,7 @@ export function LineItemsEditor() {
                       count={fields.length}
                       onMove={(to) => move(index, to)}
                       onDuplicate={(values) => insert(index + 1, values)}
-                      onRemove={() => removeLine(index)}
+                      onRemove={() => remove(index)}
                     />
                   </div>
                 </div>

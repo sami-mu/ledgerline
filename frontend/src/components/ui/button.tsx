@@ -18,14 +18,12 @@ const buttonVariants = cva(
         secondary:
           "border border-line-strong bg-surface text-ink hover:border-ink-4 hover:bg-subtle active:bg-sunken",
         ghost: "text-ink-2 hover:bg-sunken hover:text-ink active:bg-line",
-        danger: "text-danger hover:bg-danger-soft",
         destructive:
           "bg-danger text-white shadow-[inset_0_-1px_0_rgb(0_0_0/0.18)] hover:bg-[#9a1e14] active:bg-[#82190f]",
       },
       size: {
         sm: "h-7 px-2.5 text-[13px]",
         md: "h-8 px-3 text-[13px]",
-        lg: "h-10 px-4 text-sm",
         icon: "size-8",
         "icon-sm": "size-7 [&_svg:not([class*='size-'])]:size-3.5",
       },

@@ -29,8 +29,11 @@ class InvoiceRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def get(self, invoice_id: int) -> Invoice | None:
-        return self.session.get(Invoice, invoice_id)
+    def get(self, invoice_id: int, include_deleted: bool = False) -> Invoice | None:
+        invoice = self.session.get(Invoice, invoice_id)
+        if invoice is not None and invoice.deleted_at is not None and not include_deleted:
+            return None
+        return invoice
 
     def search(self, query: InvoiceListQuery, today: date) -> tuple[list[Invoice], int, int]:
         """One page of matching invoices, plus the count and summed total of every match."""
@@ -86,7 +89,7 @@ class InvoiceRepository:
                 sum_where(is_draft),
                 count_where(Invoice.status == InvoiceStatus.PAID),
                 func.count(Invoice.id),
-            )
+            ).where(Invoice.deleted_at.is_(None))
         ).one()
         return StatsRow(
             outstanding=BucketRow(row[0], row[1]),
@@ -124,13 +127,9 @@ class InvoiceRepository:
         self.session.refresh(invoice)
         return invoice
 
-    def delete(self, invoice: Invoice) -> None:
-        self.session.delete(invoice)
-        self.session.commit()
-
     @staticmethod
     def _conditions(query: InvoiceListQuery, today: date) -> list[ColumnElement[bool]]:
-        conditions: list[ColumnElement[bool]] = []
+        conditions: list[ColumnElement[bool]] = [Invoice.deleted_at.is_(None)]
         match query.status:
             case "draft":
                 conditions.append(Invoice.status == InvoiceStatus.DRAFT)

@@ -4,7 +4,6 @@
 @theme {
   --color-*: initial;
   --color-transparent: transparent;
-  --color-current: currentColor;
   --color-white: #ffffff;
 
   --color-canvas: #eef1f4;

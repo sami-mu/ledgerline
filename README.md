@@ -12,7 +12,7 @@ Invoice generator for small businesses: edit on the left, live preview on the ri
 - Lifecycle: Draft, Sent, Paid, Overdue. Paid invoices are locked; edits after sending prompt a resend
 - Saved customers with autocomplete
 - Email over SMTP with the invoice attached as a PDF
-- Undo for removed lines, keyboard shortcuts (`?` lists them), responsive down to phones
+- Undo for deleted invoices (soft delete), keyboard shortcuts (`?` lists them), responsive down to phones
 
 ## Run it
 
@@ -52,9 +52,29 @@ Each line is rounded to the cent, then summed; the fixed discount comes off the 
 ## Structure
 
 ```
-backend/app/    core (config, db, errors) · models · schemas · repositories · services · api · templates
-frontend/src/   components/ui · features/invoice · pages · lib/api (types generated from OpenAPI)
+.
+├── backend/
+│   ├── app/
+│   │   ├── api/            # routes and dependency wiring
+│   │   ├── core/           # config, database, errors
+│   │   ├── models/         # SQLAlchemy tables
+│   │   ├── schemas/        # Pydantic request and response models
+│   │   ├── repositories/   # queries
+│   │   ├── services/       # business rules, money, email, PDF
+│   │   ├── templates/      # email and PDF templates
+│   │   ├── seed.py
+│   │   └── main.py
+│   └── tests/
+└── frontend/
+    └── src/
+        ├── components/     # UI primitives and app shell
+        ├── features/       # invoice editor, preview, list, shortcuts
+        ├── hooks/
+        ├── lib/            # API client (types generated from OpenAPI), query setup
+        ├── pages/
+        └── main.tsx
 ```
+
 ## Tests
 
 ```bash
@@ -63,7 +83,7 @@ cd frontend && npm test && npm run typecheck && npm run lint
 ```
 ## Time spent
 
-About _X_ hours.
+About 3 hours.
 
 ## Not done yet
 

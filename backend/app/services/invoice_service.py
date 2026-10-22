@@ -12,6 +12,7 @@ from app.core.errors import (
     NotFoundError,
 )
 from app.models import CustomField, EventKind, Invoice, InvoiceEvent, InvoiceStatus, LineItem
+from app.models.invoice import utc_now
 from app.repositories.invoice_repository import BucketRow, InvoiceRepository
 from app.schemas.invoice import (
     Bucket,
@@ -158,7 +159,20 @@ class InvoiceService:
         return self.to_out(self.repository.save(invoice))
 
     def delete(self, invoice_id: int) -> None:
-        self.repository.delete(self._get_or_raise(invoice_id))
+        invoice = self._get_or_raise(invoice_id)
+        if invoice.status == InvoiceStatus.PAID:
+            raise InvoiceLockedError(f"Invoice {invoice.number} is paid, so it can't be deleted.")
+        invoice.deleted_at = utc_now()
+        self.repository.save(invoice)
+
+    def restore(self, invoice_id: int) -> InvoiceOut:
+        invoice = self.repository.get(invoice_id, include_deleted=True)
+        if invoice is None:
+            raise NotFoundError(f"Invoice {invoice_id} was not found.")
+        if invoice.deleted_at is None:
+            raise ConflictError(f"Invoice {invoice.number} isn't deleted.")
+        invoice.deleted_at = None
+        return self.to_out(self.repository.save(invoice))
 
     def backfill(self) -> int:
         """Fill in stored totals and customer links for invoices saved by older versions."""

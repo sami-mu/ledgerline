@@ -2,10 +2,7 @@ import type { FieldPath, UseFormSetError } from "react-hook-form";
 import { ApiError } from "@/lib/api/client";
 import type { InvoiceFormValues } from "./schema";
 
-/**
- * Puts server errors next to the fields they belong to. Returns true when every error found a
- * field, so the caller can skip the generic toast.
- */
+/** Shows server errors on their fields; returns true if it did. */
 export function applyServerErrors(
   error: unknown,
   setError: UseFormSetError<InvoiceFormValues>,

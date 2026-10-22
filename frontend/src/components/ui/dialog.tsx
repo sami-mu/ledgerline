@@ -48,7 +48,6 @@ export function DialogContent({ className, title, description, children, ...prop
   );
 }
 
-/** A dialog that slides in from the left, used for the invoice list. */
 export function DrawerContent({ className, title, description, children, ...props }: ContentProps) {
   return (
     <DialogPrimitive.Portal>

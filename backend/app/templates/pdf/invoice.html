@@ -6,30 +6,28 @@
 <meta charset="utf-8">
 <title>Invoice {{ invoice.number }}</title>
 <style>
-  @font-face { font-family: "Plex Sans"; font-weight: 400; src: url("fonts/ibm-plex-sans-latin-400-normal.woff"); }
-  @font-face { font-family: "Plex Sans"; font-weight: 500; src: url("fonts/ibm-plex-sans-latin-500-normal.woff"); }
-  @font-face { font-family: "Plex Sans"; font-weight: 600; src: url("fonts/ibm-plex-sans-latin-600-normal.woff"); }
-  @font-face { font-family: "Plex Mono"; font-weight: 400; src: url("fonts/ibm-plex-mono-latin-400-normal.woff"); }
-  @font-face { font-family: "Plex Mono"; font-weight: 500; src: url("fonts/ibm-plex-mono-latin-500-normal.woff"); }
+  @font-face { font-family: "Inter"; font-weight: 400; src: url("fonts/inter-latin-400-normal.woff"); }
+  @font-face { font-family: "Inter"; font-weight: 500; src: url("fonts/inter-latin-500-normal.woff"); }
+  @font-face { font-family: "Inter"; font-weight: 600; src: url("fonts/inter-latin-600-normal.woff"); }
 
   @page {
     size: letter;
     margin: 0.6in 0.65in 0.75in;
     @bottom-left {
       content: "{{ invoice.business_name | css_string }}";
-      font: 400 8pt "Plex Sans"; color: #5f6975;
+      font: 400 8pt "Inter"; color: #5f6975;
     }
     @bottom-right {
       content: "{{ invoice.number | css_string }}  ·  Page " counter(page) " of " counter(pages);
-      font: 400 8pt "Plex Sans"; color: #5f6975;
+      font: 400 8pt "Inter"; color: #5f6975;
     }
   }
 
   * { box-sizing: border-box; }
-  html { font: 400 9.5pt/1.55 "Plex Sans", sans-serif; color: #0e1217; }
+  html { font: 400 9.5pt/1.55 "Inter", sans-serif; color: #0e1217; }
   body { margin: 0; }
   p { margin: 0; }
-  .num { font-family: "Plex Mono", monospace; letter-spacing: -0.01em; }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
   .caps { font-size: 7pt; line-height: 1.4; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #5f6975; }
   .muted { color: #3a434e; }
   .faint { color: #5f6975; }
@@ -51,6 +49,7 @@
   .due { text-align: right; }
   .due-amount { font-size: 18pt; line-height: 1; font-weight: 500; letter-spacing: -0.02em; color: #0d3d2b; }
   .due-date { margin-top: 6pt; }
+  .paid { display: inline-block; padding: 1pt 4pt; border-radius: 2pt; background: #e6f0eb; color: #0d3d2b; font-size: 7.5pt; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 
   table.items { width: 100%; margin-top: 34pt; border-collapse: collapse; }
   .items th { padding: 0 0 6pt; border-bottom: 0.75pt solid #0e1217; text-align: left; }
@@ -104,15 +103,22 @@
       <table class="details">
         <tr><td class="faint">Issued</td><td>{{ invoice.issue_date | long_date }}</td></tr>
         <tr><td class="faint">Due</td><td>{{ invoice.due_date | long_date }}</td></tr>
+        {% if invoice.payment_terms_days is not none %}
+        <tr><td class="faint">Terms</td><td>{{ "Due on receipt" if invoice.payment_terms_days == 0 else "Net " ~ invoice.payment_terms_days }}</td></tr>
+        {% endif %}
         {% for field in custom_fields %}
         <tr><td class="faint">{{ field.label }}</td><td>{{ field.value or "-" }}</td></tr>
         {% endfor %}
       </table>
     </div>
     <div class="due">
-      <h3 class="caps">Amount due</h3>
+      <h3 class="caps">{{ "Amount paid" if invoice.status == "paid" else "Amount due" }}</h3>
       <p class="due-amount num">{{ invoice.totals.total | usd }}</p>
+      {% if invoice.status == "paid" and invoice.paid_on %}
+      <p class="due-date paid">Paid {{ invoice.paid_on | long_date }}</p>
+      {% else %}
       <p class="due-date faint">Due {{ invoice.due_date | long_date }}</p>
+      {% endif %}
     </div>
   </div>
 

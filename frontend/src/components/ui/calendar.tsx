@@ -3,7 +3,6 @@ import type { ComponentProps } from "react";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 
-/** Month calendar (react-day-picker), styled entirely with the app's tokens. */
 export function Calendar({ className, classNames, ...props }: ComponentProps<typeof DayPicker>) {
   return (
     <DayPicker

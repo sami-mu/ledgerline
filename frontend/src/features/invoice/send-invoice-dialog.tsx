@@ -57,10 +57,9 @@ export function SendInvoiceDialog({
   });
   const { errors, isSubmitting } = form.formState;
 
-  // Fresh defaults every time the dialog opens, from the invoice as it is now.
   useEffect(() => {
     if (open) form.reset(defaults(invoice, totals));
-    // Only on open: re-running on every keystroke in the editor would wipe the user's draft.
+    // Reset only on open, so editor keystrokes don't wipe the draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 

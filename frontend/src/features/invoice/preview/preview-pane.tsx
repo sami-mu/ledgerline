@@ -6,8 +6,7 @@ import { InvoicePaper } from "./invoice-paper";
 
 const PAPER_WIDTH = 816; // US Letter at 96 dpi
 
-/** Live preview, scaled down to fit the available width. */
-export function PreviewPane() {
+export function PreviewPane({ paidOn }: { paidOn?: string }) {
   const values = useWatch<InvoiceFormValues>() as InvoiceFormValues;
   const totals = useTotals();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,20 +38,25 @@ export function PreviewPane() {
           style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
           className="w-[816px] rounded-xs shadow-paper"
         >
-          <InvoicePaper values={values} totals={totals} className="min-h-[1056px]" />
+          <InvoicePaper
+            values={values}
+            totals={totals}
+            paidOn={paidOn}
+            className="min-h-[1056px]"
+          />
         </div>
       </div>
     </div>
   );
 }
 
-/** Unscaled copy of the invoice that only exists in print. */
-export function PrintableInvoice() {
+/** Unscaled copy, used only when printing. */
+export function PrintableInvoice({ paidOn }: { paidOn?: string }) {
   const values = useWatch<InvoiceFormValues>() as InvoiceFormValues;
   const totals = useTotals();
   return (
     <div className="hidden print:block">
-      <InvoicePaper values={values} totals={totals} />
+      <InvoicePaper values={values} totals={totals} paidOn={paidOn} />
     </div>
   );
 }

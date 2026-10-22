@@ -12,7 +12,7 @@ from pydantic import (
 )
 from pydantic.networks import validate_email
 
-# Shared field types. Limits match the frontend Zod schema in src/features/invoice/schema.ts.
+# Limits match the frontend schema in src/features/invoice/schema.ts.
 Text = Annotated[str, StringConstraints(strip_whitespace=True)]
 RequiredText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -58,6 +58,8 @@ class InvoiceIn(BaseModel):
     customer_address: Annotated[Text, StringConstraints(max_length=500)] = ""
     issue_date: date
     due_date: date
+    # Net days. When set, the server derives due_date from issue_date.
+    payment_terms_days: Annotated[int, Field(ge=0, le=365)] | None = None
     notes: Annotated[Text, StringConstraints(max_length=2000)] = ""
     discount: Money = Decimal("0")
     tax_rate: TaxRate = Decimal("0")
@@ -101,10 +103,23 @@ def _as_utc(value: datetime) -> str:
 UtcDatetime = Annotated[datetime, PlainSerializer(_as_utc, return_type=str, when_used="json")]
 
 
+Status = Literal["draft", "sent", "paid"]
+
+
+class EventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: Literal["created", "edited_after_sent", "sent", "resent", "paid", "reopened"]
+    detail: str
+    created_at: UtcDatetime
+
+
 class InvoiceOut(BaseModel):
     id: int
     number: str
-    status: Literal["draft", "sent"]
+    status: Status
+    is_overdue: bool
     business_name: str
     business_email: str
     business_address: str
@@ -113,6 +128,7 @@ class InvoiceOut(BaseModel):
     customer_address: str
     issue_date: date
     due_date: date
+    payment_terms_days: int | None
     notes: str
     discount: Decimal
     tax_rate: Decimal
@@ -121,6 +137,9 @@ class InvoiceOut(BaseModel):
     totals: TotalsOut
     sent_at: UtcDatetime | None
     last_sent_to: str
+    changed_since_sent: bool
+    paid_on: date | None
+    events: list[EventOut]
     created_at: UtcDatetime
     updated_at: UtcDatetime
 
@@ -128,13 +147,69 @@ class InvoiceOut(BaseModel):
 class InvoiceSummary(BaseModel):
     id: int
     number: str
-    status: Literal["draft", "sent"]
+    status: Status
+    is_overdue: bool
     customer_name: str
     issue_date: date
     due_date: date
     total: Decimal
+    sent_at: UtcDatetime | None
+    paid_on: date | None
     updated_at: UtcDatetime
+
+
+class MarkPaidIn(BaseModel):
+    paid_on: date
 
 
 class NextNumberOut(BaseModel):
     number: str
+
+
+ListStatus = Literal["all", "draft", "outstanding", "overdue", "paid"]
+SortField = Literal["number", "customer", "issue_date", "due_date", "status", "total", "updated_at"]
+
+
+class InvoiceListQuery(BaseModel):
+    """Unknown values are rejected, not ignored."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    q: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] = ""
+    status: ListStatus = "all"
+    sort: SortField = "issue_date"
+    direction: Literal["asc", "desc"] = "desc"
+    page: Annotated[int, Field(ge=1)] = 1
+    page_size: Annotated[int, Field(ge=1, le=100)] = 20
+
+
+class InvoicePage(BaseModel):
+    items: list[InvoiceSummary]
+    total: int
+    # Sum of every matching invoice, not just this page.
+    total_amount: Decimal
+    page: int
+    page_size: int
+    pages: int
+
+
+class Bucket(BaseModel):
+    count: int
+    total: Decimal
+
+
+class StatusCounts(BaseModel):
+    all: int
+    draft: int
+    outstanding: int
+    overdue: int
+    paid: int
+
+
+class InvoiceStats(BaseModel):
+    as_of: date
+    outstanding: Bucket
+    overdue: Bucket
+    paid_this_month: Bucket
+    drafts: Bucket
+    counts: StatusCounts

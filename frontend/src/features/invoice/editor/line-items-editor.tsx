@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, Copy, EllipsisVertical, Plus, Trash2, X } from "luc
 import type { KeyboardEvent } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useUndoToast } from "@/hooks/use-undo-toast";
 import { emptyLineItem } from "../form-mapping";
 import { formatCents, lineTotalCents } from "../money";
 import type { InvoiceFormValues } from "../schema";
@@ -24,14 +26,24 @@ const ROW_GRID =
   "grid grid-cols-3 gap-x-2 gap-y-2 @lg:grid-cols-[minmax(0,1fr)_3.75rem_6.25rem_5.75rem_3.5rem]";
 
 export function LineItemsEditor() {
-  const { control } = useFormContext<InvoiceFormValues>();
+  const { control, getValues } = useFormContext<InvoiceFormValues>();
   const { fields, append, remove, move, insert } = useFieldArray({ control, name: "line_items" });
+  const offerUndo = useUndoToast();
+
+  const removeLine = (index: number) => {
+    const removed = { ...getValues(`line_items.${index}`) };
+    remove(index);
+    offerUndo({
+      message: "Line removed",
+      detail: removed.description || undefined,
+      onUndo: () => insert(Math.min(index, getValues("line_items").length), removed),
+    });
+  };
   const listError = useFieldError("line_items");
 
   const addLine = () =>
     append(emptyLineItem(), { focusName: `line_items.${fields.length}.description` });
 
-  // Enter in the last price field adds a new line, like a spreadsheet.
   const onPriceKeyDown = (index: number) => (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" && index === fields.length - 1 && fields.length < MAX_LINES) {
       event.preventDefault();
@@ -43,7 +55,14 @@ export function LineItemsEditor() {
     <EditorSection
       id="line-items"
       title="Line items"
-      description="Each line is rounded to the cent before it is added up."
+      description={
+        <>
+          Each line is rounded to the cent.{" "}
+          <span className="max-sm:hidden">
+            Press <Kbd>Enter</Kbd> in the last price to add a line.
+          </span>
+        </>
+      }
     >
       <div className="@container">
         <div
@@ -96,7 +115,7 @@ export function LineItemsEditor() {
                       count={fields.length}
                       onMove={(to) => move(index, to)}
                       onDuplicate={(values) => insert(index + 1, values)}
-                      onRemove={() => remove(index)}
+                      onRemove={() => removeLine(index)}
                     />
                   </div>
                 </div>

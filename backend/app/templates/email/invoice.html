@@ -1,7 +1,7 @@
 {#- Email clients ignore most CSS, so this uses tables and inline styles only.
     The full invoice travels as the PDF attachment; the body is a short summary. -#}
 {% set sans = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" %}
-{% set mono = "'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace" %}
+{% set nums = sans ~ ";font-variant-numeric:tabular-nums" %}
 {% set ink = "#0e1217" %}{% set ink2 = "#3a434e" %}{% set ink3 = "#5f6975" %}
 {% set line = "#e1e5ea" %}{% set accent = "#0d3d2b" %}
 <!doctype html>
@@ -28,11 +28,11 @@
           <tr>
             <td valign="top">
               <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Amount due</div>
-              <div style="font-family:{{ mono }};font-size:26px;line-height:34px;color:{{ accent }};">{{ invoice.totals.total | usd }}</div>
+              <div style="font-family:{{ nums }};font-size:26px;line-height:34px;color:{{ accent }};">{{ invoice.totals.total | usd }}</div>
               <div style="font-size:13px;color:{{ ink3 }};">Due {{ invoice.due_date | long_date }}</div>
             </td>
             <td valign="top" align="right" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Invoice<br>
-              <span style="font-family:{{ mono }};font-size:14px;letter-spacing:0;text-transform:none;color:{{ ink }};">{{ invoice.number }}</span></td>
+              <span style="font-family:{{ nums }};font-size:14px;letter-spacing:0;text-transform:none;color:{{ ink }};">{{ invoice.number }}</span></td>
           </tr>
         </table>
       </td></tr>

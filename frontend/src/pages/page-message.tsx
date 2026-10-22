@@ -9,7 +9,6 @@ type Props = {
   action?: { label: string; onClick: () => void };
 };
 
-/** Full page state for loading, errors and not found. */
 export function PageMessage({ title, description, loading, action }: Props) {
   return (
     <div className="flex min-h-dvh flex-col">

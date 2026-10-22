@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
-import { useBlocker, useNavigate } from "react-router";
+import { Link, useBlocker, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Brand } from "@/components/app/brand";
+import { BrandMark } from "@/components/app/brand";
 import { TopBar } from "@/components/app/top-bar";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -27,7 +27,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Kbd } from "@/components/ui/kbd";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ShortcutsButton } from "@/features/shortcuts/shortcuts-dialog";
+import { modKey } from "@/lib/platform";
 import type { InvoiceOut, SendInvoiceIn } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { InvoiceEditor } from "./editor/invoice-editor";
@@ -38,18 +41,27 @@ import { InvoiceListDrawer } from "./invoice-list-drawer";
 import { PreviewPane, PrintableInvoice } from "./preview/preview-pane";
 import { SaveStatus, type SaveState } from "./save-status";
 import { invoiceFormSchema, type InvoiceFormValues } from "./schema";
+import { MarkPaidDialog } from "./mark-paid-dialog";
+import { displayStatus } from "./status";
 import { StatusBadge } from "./status-badge";
+import { StatusBanner } from "./status-banner";
 import { SendInvoiceDialog } from "./send-invoice-dialog";
 import { useTotals } from "./use-totals";
-import { useDeleteInvoice, useSaveInvoice, useSendInvoice } from "./use-invoice-mutations";
+import {
+  useDeleteInvoice,
+  useMarkPaid,
+  useMarkUnpaid,
+  useSaveInvoice,
+  useSendInvoice,
+} from "./use-invoice-mutations";
 
 type Props = {
-  /** The saved invoice, or undefined for a new one. */
   invoice?: InvoiceOut;
   defaultValues: InvoiceFormValues;
 };
 
-const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+// Key caps on the dark tooltip need inverted colours.
+const TOOLTIP_KBD = "border-white/20 bg-white/10 text-white shadow-none";
 
 export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
   const navigate = useNavigate();
@@ -63,10 +75,15 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
   const deleteMutation = useDeleteInvoice();
   const sendMutation = useSendInvoice();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const markPaidMutation = useMarkPaid();
+  const markUnpaidMutation = useMarkUnpaid();
   const [sendOpen, setSendOpen] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [confirmSentEdit, setConfirmSentEdit] = useState(false);
   const [view, setView] = useState<PaneView>("edit");
+  const isPaid = invoice?.status === "paid";
 
-  // Navigation guard. `allowLeave` lets our own redirects (after create or delete) through.
+  // `allowLeave` lets our own redirects (after create or delete) past the guard.
   const allowLeave = useRef(false);
   const dirtyRef = useRef(isDirty);
   useEffect(() => {
@@ -87,7 +104,7 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
-  /** Validates and saves. Resolves to the saved invoice, or null when it couldn't be saved. */
+  /** Resolves to the saved invoice, or null if it couldn't be saved. */
   const persist = () =>
     new Promise<InvoiceOut | null>((resolve) => {
       void form.handleSubmit(
@@ -119,7 +136,6 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
       )();
     });
 
-  /** After the first save, a new invoice moves to its own URL. */
   const openSaved = (saved: InvoiceOut) => {
     allowLeave.current = true;
     navigate(`/invoices/${saved.id}`, { replace: true });
@@ -133,6 +149,38 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
     } else if (!invoice) {
       toast.success(`Invoice ${saved.number} created`);
       openSaved(saved);
+    }
+  };
+
+  /** The first edit to a sent invoice asks first; paid invoices are locked. */
+  const requestSave = () => {
+    if (isPaid) {
+      toast.error("Paid invoices are locked", { description: "Mark it as unpaid to edit it." });
+      return;
+    }
+    if (invoice?.status === "sent" && !invoice.changed_since_sent && isDirty) {
+      setConfirmSentEdit(true);
+      return;
+    }
+    void save();
+  };
+
+  const markPaid = async (paidOn: string) => {
+    if (!invoice) return;
+    const paid = await markPaidMutation.mutateAsync({ id: invoice.id, paidOn });
+    setMarkPaidOpen(false);
+    toast.success(`Invoice ${paid.number} marked as paid`);
+  };
+
+  const markUnpaid = async () => {
+    if (!invoice) return;
+    try {
+      await markUnpaidMutation.mutateAsync(invoice.id);
+      toast.success(`Invoice ${invoice.number} is open again`);
+    } catch (error) {
+      toast.error("Couldn't update the invoice", {
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
   };
 
@@ -155,16 +203,15 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
     }
   };
 
-  // Ctrl/Cmd+S saves from anywhere on the page.
-  const saveRef = useRef(save);
+  const saveRef = useRef(requestSave);
   useEffect(() => {
-    saveRef.current = save;
+    saveRef.current = requestSave;
   });
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        void saveRef.current();
+        saveRef.current();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -178,7 +225,7 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
       allowLeave.current = true;
       setConfirmDelete(false);
       toast.success(`Invoice ${invoice.number} deleted`);
-      navigate("/", { replace: true });
+      navigate("/invoices", { replace: true });
     } catch (error) {
       toast.error("Couldn't delete the invoice", {
         description: error instanceof Error ? error.message : undefined,
@@ -212,21 +259,53 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
                 </Tooltip>
                 <InvoiceListDrawer activeId={invoice?.id} />
               </Dialog>
-              <span className="hidden sm:inline-flex">
-                <Brand />
-              </span>
-              <ChevronRight className="hidden size-3.5 text-ink-4 sm:block" aria-hidden />
-              <InvoiceNumber />
-              {invoice && <StatusBadge status={invoice.status} className="ml-1" />}
+              <nav aria-label="Breadcrumb" className="min-w-0">
+                <ol className="flex min-w-0 items-center gap-1.5 text-[13px]">
+                  <li className="hidden sm:flex">
+                    <Link to="/invoices" aria-label="Ledgerline home" className="rounded-sm">
+                      <BrandMark className="size-5" />
+                    </Link>
+                  </li>
+                  <li className="hidden items-center gap-1.5 sm:flex">
+                    <ChevronRight className="size-3.5 text-ink-4" aria-hidden />
+                    <Link
+                      to="/invoices"
+                      className="rounded-sm font-medium text-ink-2 transition-colors hover:text-ink"
+                    >
+                      Invoices
+                    </Link>
+                    <ChevronRight className="size-3.5 text-ink-4" aria-hidden />
+                  </li>
+                  <li className="min-w-0" aria-current="page">
+                    <InvoiceNumber />
+                  </li>
+                </ol>
+              </nav>
+              {invoice && (
+                <StatusBadge
+                  status={displayStatus(invoice.status, invoice.is_overdue)}
+                  className="ml-1"
+                />
+              )}
             </>
           }
           end={
             <>
               <SaveStatus state={saveState} className="mr-1 hidden lg:inline-flex" />
-              <Tooltip content={`Save (${isMac ? "Cmd" : "Ctrl"}+S)`}>
+              <Tooltip
+                content={
+                  <span className="flex items-center gap-1.5">
+                    Save
+                    <span className="flex gap-0.5">
+                      <Kbd className={TOOLTIP_KBD}>{modKey}</Kbd>
+                      <Kbd className={TOOLTIP_KBD}>S</Kbd>
+                    </span>
+                  </span>
+                }
+              >
                 <Button
-                  onClick={() => void save()}
-                  disabled={saveMutation.isPending || (!isDirty && !!invoice)}
+                  onClick={requestSave}
+                  disabled={saveMutation.isPending || isPaid || (!isDirty && !!invoice)}
                   aria-label="Save"
                   className="max-sm:w-8 max-sm:px-0"
                 >
@@ -236,9 +315,13 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
               <Button onClick={() => window.print()} className="hidden sm:inline-flex">
                 <Printer /> Print
               </Button>
-              <Button variant="primary" onClick={() => setSendOpen(true)}>
-                <Send /> Send
+              <Button
+                variant={invoice?.sent_at ? "secondary" : "primary"}
+                onClick={() => setSendOpen(true)}
+              >
+                <Send /> {invoice?.sent_at ? "Resend" : "Send"}
               </Button>
+              <ShortcutsButton page="editor" />
               <DropdownMenu>
                 <Tooltip content="More">
                   <DropdownMenuTrigger asChild>
@@ -260,25 +343,34 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     tone="danger"
-                    disabled={!invoice}
+                    disabled={!invoice || isPaid}
                     onSelect={() => setConfirmDelete(true)}
                   >
-                    <Trash2 /> Delete invoice
+                    <Trash2 /> {isPaid ? "Paid invoices can't be deleted" : "Delete invoice"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           }
         />
+        {invoice && (
+          <StatusBanner
+            invoice={invoice}
+            isDirty={isDirty}
+            busy={markPaidMutation.isPending || markUnpaidMutation.isPending}
+            onMarkPaid={() => setMarkPaidOpen(true)}
+            onMarkUnpaid={() => void markUnpaid()}
+            onResend={() => setSendOpen(true)}
+          />
+        )}
 
         <main className="flex min-h-0 flex-1">
-          {/* Side by side on large screens; one pane at a time below, switched from the bottom bar. */}
           <form
             id="invoice-editor"
             noValidate
             onSubmit={(event) => {
               event.preventDefault();
-              void save();
+              requestSave();
             }}
             aria-label="Invoice editor"
             className={cn(
@@ -286,7 +378,10 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
               view === "preview" && "max-lg:hidden",
             )}
           >
-            <InvoiceEditor />
+            {/* A disabled fieldset locks every control at once for paid invoices. */}
+            <fieldset disabled={isPaid} className="m-0 min-w-0 border-0 p-0">
+              <InvoiceEditor events={invoice?.events} />
+            </fieldset>
           </form>
           <section
             aria-label="Invoice preview"
@@ -295,13 +390,13 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
               view === "edit" && "max-lg:hidden",
             )}
           >
-            <PreviewPane />
+            <PreviewPane paidOn={invoice?.paid_on ?? undefined} />
           </section>
         </main>
 
         <MobileBar view={view} onViewChange={setView} saveState={saveState} />
       </div>
-      <PrintableInvoice />
+      <PrintableInvoice paidOn={invoice?.paid_on ?? undefined} />
       <ConnectedSendDialog
         open={sendOpen}
         onOpenChange={setSendOpen}
@@ -320,8 +415,34 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
           busy: saveMutation.isPending,
           onClick: () => void save(() => blocker.proceed?.()),
         }}
-        aside={{ label: "Discard changes", onClick: () => blocker.proceed?.() }}
+        alternative={{ label: "Discard changes", onClick: () => blocker.proceed?.() }}
       />
+      <ConfirmDialog
+        open={confirmSentEdit}
+        onOpenChange={setConfirmSentEdit}
+        tone="warning"
+        title="Save changes to a sent invoice?"
+        description={`${invoice?.number ?? "This invoice"} was already sent${
+          invoice?.last_sent_to ? ` to ${invoice.last_sent_to}` : ""
+        }. Saving updates your copy only. Resend it afterwards so your customer has the latest version.`}
+        confirm={{
+          label: "Save changes",
+          busy: saveMutation.isPending,
+          onClick: () => {
+            setConfirmSentEdit(false);
+            void save();
+          },
+        }}
+      />
+      {invoice && (
+        <MarkPaidDialog
+          key={markPaidOpen ? "open" : "closed"}
+          invoice={invoice}
+          open={markPaidOpen}
+          onOpenChange={setMarkPaidOpen}
+          onConfirm={markPaid}
+        />
+      )}
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
@@ -340,7 +461,6 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
 
 type PaneView = "edit" | "preview";
 
-/** Bottom bar on small screens: switch between editing and the preview, see save state. */
 function MobileBar({
   view,
   onViewChange,
@@ -378,7 +498,6 @@ function MobileBar({
   );
 }
 
-/** The send dialog, fed with live form values. Lives inside the FormProvider. */
 function ConnectedSendDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;

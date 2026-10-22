@@ -22,6 +22,11 @@ class ConflictError(DomainError):
     code = "conflict"
 
 
+class InvoiceLockedError(DomainError):
+    status_code = 409
+    code = "invoice_locked"
+
+
 class EmailNotConfiguredError(DomainError):
     status_code = 503
     code = "email_not_configured"
@@ -39,7 +44,7 @@ class FieldIssue:
 
 
 class BusinessRuleError(DomainError):
-    """A rule that spans several fields. Rendered like FastAPI's own 422 errors."""
+    """Cross-field rule failures, rendered like FastAPI's 422 errors."""
 
     status_code = 422
     code = "validation_error"

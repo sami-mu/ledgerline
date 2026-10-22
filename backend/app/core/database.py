@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
@@ -32,3 +32,22 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 def get_db() -> Iterator[Session]:
     with SessionLocal() as session:
         yield session
+
+
+def init_schema(target: Engine) -> None:
+    """Create missing tables and add new nullable columns. A small stand-in for Alembic."""
+    Base.metadata.create_all(target)
+    inspector = inspect(target)
+    with target.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                ddl_type = column.type.compile(dialect=target.dialect)
+                default = ""
+                if column.server_default is not None:
+                    default = f" DEFAULT {column.server_default.arg.text}"  # type: ignore[attr-defined]
+                connection.execute(
+                    text(f'ALTER TABLE {table.name} ADD COLUMN "{column.name}" {ddl_type}{default}')
+                )

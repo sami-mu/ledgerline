@@ -1,5 +1,6 @@
 import type { InvoiceIn, InvoiceOut } from "@/lib/api/client";
 import type { InvoiceFormValues, LineItemValues } from "./schema";
+import { DEFAULT_TERMS, daysFromTerms, termsFromDays } from "./terms";
 
 export const emptyLineItem = (): LineItemValues => ({
   description: "",
@@ -20,9 +21,11 @@ export function addDays(iso: string, days: number): string {
   return isoDate(new Date(y!, m! - 1, d! + days));
 }
 
-/** A blank invoice. Business details carry over from the last invoice, since they rarely change. */
+/** Business details and terms carry over from the last invoice. */
 export function newInvoiceValues(number: string, previous?: InvoiceOut): InvoiceFormValues {
   const today = isoDate(new Date());
+  const terms = previous ? termsFromDays(previous.payment_terms_days) : DEFAULT_TERMS;
+  const days = daysFromTerms(terms) ?? Number(DEFAULT_TERMS);
   return {
     number,
     business_name: previous?.business_name ?? "",
@@ -32,7 +35,8 @@ export function newInvoiceValues(number: string, previous?: InvoiceOut): Invoice
     customer_email: "",
     customer_address: "",
     issue_date: today,
-    due_date: addDays(today, 14),
+    due_date: addDays(today, days),
+    payment_terms: terms === "custom" ? DEFAULT_TERMS : terms,
     notes: previous?.notes ?? "",
     discount: "0",
     tax_rate: previous?.tax_rate ?? "0",
@@ -41,10 +45,18 @@ export function newInvoiceValues(number: string, previous?: InvoiceOut): Invoice
   };
 }
 
-/** A copy of an invoice with a new number and fresh dates. Status always starts as draft. */
+/** A copy with a new number and today's dates. */
 export function duplicateValues(source: InvoiceOut, number: string): InvoiceFormValues {
   const today = isoDate(new Date());
-  return { ...toFormValues(source), number, issue_date: today, due_date: addDays(today, 14) };
+  const values = toFormValues(source);
+  const days = daysFromTerms(values.payment_terms) ?? Number(DEFAULT_TERMS);
+  return {
+    ...values,
+    number,
+    issue_date: today,
+    due_date: addDays(today, days),
+    payment_terms: values.payment_terms === "custom" ? DEFAULT_TERMS : values.payment_terms,
+  };
 }
 
 export function toFormValues(invoice: InvoiceOut): InvoiceFormValues {
@@ -58,6 +70,7 @@ export function toFormValues(invoice: InvoiceOut): InvoiceFormValues {
     customer_address: invoice.customer_address,
     issue_date: invoice.issue_date,
     due_date: invoice.due_date,
+    payment_terms: termsFromDays(invoice.payment_terms_days),
     notes: invoice.notes,
     discount: invoice.discount,
     tax_rate: invoice.tax_rate,
@@ -75,8 +88,10 @@ export function toFormValues(invoice: InvoiceOut): InvoiceFormValues {
 }
 
 export function toPayload(values: InvoiceFormValues): InvoiceIn {
+  const { payment_terms, ...rest } = values;
   return {
-    ...values,
+    ...rest,
+    payment_terms_days: daysFromTerms(payment_terms),
     business_address: values.business_address.trim(),
     customer_address: values.customer_address.trim(),
     notes: values.notes.trim(),

@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { ApiError } from "./api/client";
+import { ApiError, type InvoiceListParams } from "./api/client";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,9 +13,15 @@ export const queryClient = new QueryClient({
   },
 });
 
+// Invalidating `invoices.lists` refreshes every page, filter and search at once.
 export const queryKeys = {
-  invoices: ["invoices"] as const,
-  invoice: (id: number) => ["invoices", id] as const,
-  nextNumber: ["invoices", "next-number"] as const,
+  invoices: {
+    lists: ["invoices", "list"] as const,
+    list: (params: InvoiceListParams) => ["invoices", "list", params] as const,
+    stats: ["invoices", "stats"] as const,
+    detail: (id: number) => ["invoices", "detail", id] as const,
+    nextNumber: ["invoices", "next-number"] as const,
+  },
+  customers: (q: string) => ["customers", q] as const,
   health: ["health"] as const,
 };

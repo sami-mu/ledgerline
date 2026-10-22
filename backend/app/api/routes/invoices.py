@@ -1,15 +1,34 @@
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, Query, status
 
 from app.api.deps import InvoiceEmailServiceDep, InvoiceServiceDep
 from app.schemas.email import SendInvoiceIn
-from app.schemas.invoice import InvoiceIn, InvoiceOut, InvoiceSummary, NextNumberOut
+from app.schemas.invoice import (
+    InvoiceIn,
+    InvoiceListQuery,
+    InvoiceOut,
+    InvoicePage,
+    InvoiceStats,
+    MarkPaidIn,
+    NextNumberOut,
+)
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
 
-@router.get("", response_model=list[InvoiceSummary])
-def list_invoices(service: InvoiceServiceDep) -> list[InvoiceSummary]:
-    return service.list_all()
+@router.get("", response_model=InvoicePage)
+def list_invoices(
+    query: Annotated[InvoiceListQuery, Query()], service: InvoiceServiceDep
+) -> InvoicePage:
+    """Search, filter, sort and page through invoices."""
+    return service.list_page(query)
+
+
+@router.get("/stats", response_model=InvoiceStats)
+def invoice_stats(service: InvoiceServiceDep) -> InvoiceStats:
+    """Headline figures for the list page, computed over every invoice."""
+    return service.stats()
 
 
 @router.get("/next-number", response_model=NextNumberOut)
@@ -42,3 +61,15 @@ async def send_invoice(
     invoice_id: int, payload: SendInvoiceIn, service: InvoiceEmailServiceDep
 ) -> InvoiceOut:
     return await service.send(invoice_id, payload)
+
+
+@router.post("/{invoice_id}/mark-paid", response_model=InvoiceOut)
+def mark_invoice_paid(
+    invoice_id: int, payload: MarkPaidIn, service: InvoiceServiceDep
+) -> InvoiceOut:
+    return service.mark_paid(invoice_id, payload.paid_on)
+
+
+@router.post("/{invoice_id}/mark-unpaid", response_model=InvoiceOut)
+def mark_invoice_unpaid(invoice_id: int, service: InvoiceServiceDep) -> InvoiceOut:
+    return service.mark_unpaid(invoice_id)

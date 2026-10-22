@@ -7,7 +7,7 @@ export function NotFoundPage() {
     <PageMessage
       title="Page not found"
       description="This address doesn't match anything in Ledgerline."
-      action={{ label: "Go to invoices", onClick: () => navigate("/") }}
+      action={{ label: "Go to invoices", onClick: () => navigate("/invoices") }}
     />
   );
 }

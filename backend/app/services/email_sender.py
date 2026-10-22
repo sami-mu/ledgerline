@@ -1,4 +1,4 @@
-"""Transport for outgoing mail. The service depends on the protocol, so tests use a fake."""
+"""SMTP transport behind a protocol, so tests can use a fake."""
 
 from email.message import EmailMessage
 from typing import Protocol

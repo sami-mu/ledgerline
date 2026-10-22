@@ -1,4 +1,4 @@
-"""Jinja setup shared by the email and PDF templates, so both format money and dates alike."""
+"""Jinja environment shared by the email and PDF templates."""
 
 from datetime import date
 from decimal import Decimal

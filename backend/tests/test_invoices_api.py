@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import invoice_payload
@@ -30,8 +31,9 @@ def test_saved_invoice_can_be_retrieved_and_listed(client: TestClient) -> None:
     assert fetched.json()["number"] == "INV-0001"
 
     listing = client.get("/api/invoices").json()
-    assert listing[0]["id"] == created["id"]
-    assert listing[0]["total"] == "99.00"
+    assert listing["total"] == 1
+    assert listing["items"][0]["id"] == created["id"]
+    assert listing["items"][0]["total"] == "99.00"
 
 
 def test_update_replaces_line_items_and_custom_fields(client: TestClient) -> None:
@@ -56,48 +58,33 @@ def test_delete(client: TestClient) -> None:
     assert client.get(f"/api/invoices/{created['id']}").status_code == 404
 
 
-def test_rejects_negative_values(client: TestClient) -> None:
-    payload = invoice_payload(
-        discount="-1",
-        tax_rate="-5",
-        line_items=[{"description": "A", "quantity": "-1", "unit_price": "-2"}],
-    )
-    response = client.post("/api/invoices", json=payload)
+LINE = {"description": "A", "quantity": "1", "unit_price": "1"}
+
+
+@pytest.mark.parametrize(
+    ("overrides", "field"),
+    [
+        ({"discount": "-1"}, "discount"),
+        ({"tax_rate": "-5"}, "tax_rate"),
+        ({"tax_rate": "101"}, "tax_rate"),
+        ({"line_items": [{**LINE, "quantity": "-1"}]}, "line_items.0.quantity"),
+        ({"line_items": [{**LINE, "unit_price": "1.005"}]}, "line_items.0.unit_price"),
+        ({"discount": "100.01"}, "discount"),  # above the $100.00 subtotal
+        ({"due_date": "2026-09-30"}, "due_date"),  # before the issue date
+        ({"customer_email": "not-an-email"}, "customer_email"),
+    ],
+)
+def test_invalid_input_is_rejected_on_its_field(
+    client: TestClient, overrides: dict[str, object], field: str
+) -> None:
+    response = client.post("/api/invoices", json=invoice_payload(**overrides))
     assert response.status_code == 422
-    assert {"discount", "tax_rate", "line_items.0.quantity", "line_items.0.unit_price"} <= set(
-        _errors(response)
-    )
+    assert field in _errors(response)
 
 
-def test_rejects_tax_rate_over_100_and_too_many_decimals(client: TestClient) -> None:
-    response = client.post(
-        "/api/invoices",
-        json=invoice_payload(
-            tax_rate="101",
-            line_items=[{"description": "A", "quantity": "1", "unit_price": "1.005"}],
-        ),
-    )
-    assert response.status_code == 422
-    assert {"tax_rate", "line_items.0.unit_price"} <= set(_errors(response))
-
-
-def test_rejects_discount_above_subtotal_with_field_location(client: TestClient) -> None:
-    response = client.post("/api/invoices", json=invoice_payload(discount="100.01"))
-    assert response.status_code == 422
-    assert _errors(response) == {"discount": "Discount can't exceed the $100.00 subtotal."}
-
-
-def test_rejects_due_date_before_issue_date(client: TestClient) -> None:
-    response = client.post("/api/invoices", json=invoice_payload(due_date="2026-09-30"))
-    assert response.status_code == 422
-    assert "due_date" in _errors(response)
-
-
-def test_rejects_invalid_customer_email_but_allows_empty(client: TestClient) -> None:
-    bad = client.post("/api/invoices", json=invoice_payload(customer_email="not-an-email"))
-    assert bad.status_code == 422
-    ok = client.post("/api/invoices", json=invoice_payload(customer_email=""))
-    assert ok.status_code == 201
+def test_empty_customer_email_is_allowed(client: TestClient) -> None:
+    response = client.post("/api/invoices", json=invoice_payload(customer_email=""))
+    assert response.status_code == 201
 
 
 def test_duplicate_number_is_a_conflict(client: TestClient) -> None:

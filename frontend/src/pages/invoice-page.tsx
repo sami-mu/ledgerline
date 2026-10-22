@@ -22,7 +22,10 @@ export function InvoicePage() {
 
 function ExistingInvoice({ id }: { id: number }) {
   const navigate = useNavigate();
-  const invoice = useQuery({ queryKey: queryKeys.invoice(id), queryFn: () => api.getInvoice(id) });
+  const invoice = useQuery({
+    queryKey: queryKeys.invoices.detail(id),
+    queryFn: () => api.getInvoice(id),
+  });
 
   if (invoice.isPending) return <PageMessage loading title="Opening invoice" />;
   if (invoice.isError) {
@@ -33,7 +36,7 @@ function ExistingInvoice({ id }: { id: number }) {
         description={missing ? "It may have been deleted." : invoice.error.message}
         action={
           missing
-            ? { label: "Go to invoices", onClick: () => navigate("/") }
+            ? { label: "Go to invoices", onClick: () => navigate("/invoices") }
             : { label: "Try again", onClick: () => invoice.refetch() }
         }
       />
@@ -44,12 +47,20 @@ function ExistingInvoice({ id }: { id: number }) {
 
 /** A blank invoice, or a copy of `sourceId` when duplicating. */
 function NewInvoice({ sourceId }: { sourceId?: number }) {
-  const nextNumber = useQuery({ queryKey: queryKeys.nextNumber, queryFn: api.nextNumber });
-  const list = useQuery({ queryKey: queryKeys.invoices, queryFn: api.listInvoices });
-  const latestId = sourceId ?? list.data?.[0]?.id;
-  // Copy the source invoice, or carry business details over from the most recent one.
+  const nextNumber = useQuery({
+    queryKey: queryKeys.invoices.nextNumber,
+    queryFn: api.nextNumber,
+  });
+  // The most recently edited invoice, whose business details and terms carry over.
+  const latestParams = { sort: "updated_at", direction: "desc", page_size: 1 } as const;
+  const list = useQuery({
+    queryKey: queryKeys.invoices.list(latestParams),
+    queryFn: ({ signal }) => api.listInvoices(latestParams, signal),
+    enabled: sourceId === undefined,
+  });
+  const latestId = sourceId ?? list.data?.items[0]?.id;
   const latest = useQuery({
-    queryKey: queryKeys.invoice(latestId ?? 0),
+    queryKey: queryKeys.invoices.detail(latestId ?? 0),
     queryFn: () => api.getInvoice(latestId!),
     enabled: latestId !== undefined,
   });

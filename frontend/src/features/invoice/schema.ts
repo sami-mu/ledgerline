@@ -8,10 +8,7 @@ import {
   subtotalCents,
 } from "./money";
 
-/*
- * Form schema. Field names and limits match the API (backend/app/schemas/invoice.py), so
- * server field errors map straight onto form paths. Numbers stay strings, exactly as typed.
- */
+// Names and limits match backend/app/schemas/invoice.py, so server errors map onto form paths.
 
 function decimalField(opts: { decimals: number; max: number; unit?: string }) {
   return z.string().superRefine((raw, ctx) => {
@@ -70,6 +67,7 @@ export const invoiceFormSchema = z
     customer_address: z.string().max(500),
     issue_date: isoDate("Issue date"),
     due_date: isoDate("Due date"),
+    payment_terms: z.string(),
     notes: z.string().max(2000, "Keep notes under 2,000 characters"),
     discount: decimalField({ decimals: MONEY_DECIMALS, max: 100_000_000 }),
     tax_rate: decimalField({ decimals: TAX_RATE_DECIMALS, max: 100, unit: "%" }),

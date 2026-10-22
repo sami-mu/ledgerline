@@ -1,12 +1,4 @@
-"""Invoice arithmetic. All amounts are USD Decimals, rounded half up to cents.
-
-Order of operations (from the brief):
-  1. each line total = quantity x unit price, rounded to cents
-  2. subtotal = sum of line totals
-  3. subtract the fixed discount
-  4. tax = (subtotal - discount) x rate, rounded to cents
-  5. total = subtotal - discount + tax
-"""
+"""Invoice math in Decimals. Lines are rounded to cents, then tax on (subtotal - discount)."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -18,6 +10,16 @@ ZERO = Decimal("0.00")
 
 def to_cents(value: Decimal) -> Decimal:
     return value.quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def to_minor(amount: Decimal) -> int:
+    """Dollars to whole cents: Decimal("12.34") -> 1234."""
+    return int(to_cents(amount) * 100)
+
+
+def from_minor(cents: int) -> Decimal:
+    """Whole cents to dollars: 1234 -> Decimal("12.34")."""
+    return (Decimal(cents) / 100).quantize(CENT)
 
 
 def line_total(quantity: Decimal, unit_price: Decimal) -> Decimal:

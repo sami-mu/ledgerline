@@ -1,34 +1,44 @@
-import { useQuery } from "@tanstack/react-query";
-import { FileText, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ArrowRight, FileText, Plus, Search } from "lucide-react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { DialogClose, DrawerContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { api, type InvoiceSummary } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { formatIsoDate } from "./dates";
-import { formatCents, parseScaled } from "./money";
+import { formatMoney } from "./money";
+import { displayStatus } from "./status";
 import { StatusBadge } from "./status-badge";
 
-/** Drawer content listing every saved invoice. Render inside a <Dialog>. */
 export function InvoiceListDrawer({ activeId }: { activeId?: number }) {
-  const navigate = useNavigate();
-  const invoices = useQuery({ queryKey: queryKeys.invoices, queryFn: api.listInvoices });
-  const [query, setQuery] = useState("");
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!invoices.data || !q) return invoices.data ?? [];
-    return invoices.data.filter(
-      (i) => i.number.toLowerCase().includes(q) || i.customer_name.toLowerCase().includes(q),
-    );
-  }, [invoices.data, query]);
-
+  // Children mount only while open, so nothing is fetched until then.
   return (
     <DrawerContent title="Invoices" description="All saved invoices, most recent first.">
+      <DrawerBody activeId={activeId} />
+    </DrawerContent>
+  );
+}
+
+function DrawerBody({ activeId }: { activeId?: number }) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const q = useDebouncedValue(query.trim());
+  const params = { q, sort: "updated_at", direction: "desc", page_size: 25 } as const;
+  const invoices = useQuery({
+    queryKey: queryKeys.invoices.list(params),
+    queryFn: ({ signal }) => api.listInvoices(params, signal),
+    placeholderData: keepPreviousData,
+  });
+  const filtered = invoices.data?.items ?? [];
+  const more = (invoices.data?.total ?? 0) - filtered.length;
+
+  return (
+    <>
       <div className="flex flex-col gap-2 border-b border-line p-3">
         <DialogClose asChild>
           <Button variant="primary" className="w-full" onClick={() => navigate("/invoices/new")}>
@@ -80,14 +90,29 @@ export function InvoiceListDrawer({ activeId }: { activeId?: number }) {
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col">
-            {filtered.map((invoice) => (
-              <InvoiceRow key={invoice.id} invoice={invoice} active={invoice.id === activeId} />
-            ))}
-          </ul>
+          <>
+            <ul className="flex flex-col">
+              {filtered.map((invoice) => (
+                <InvoiceRow key={invoice.id} invoice={invoice} active={invoice.id === activeId} />
+              ))}
+            </ul>
+            {more > 0 && (
+              <DialogClose asChild>
+                <Link
+                  to={q ? `/invoices?q=${encodeURIComponent(q)}` : "/invoices"}
+                  className="flex items-center justify-between px-4 py-3 text-[13px] text-accent hover:bg-subtle"
+                >
+                  {more} more {more === 1 ? "invoice" : "invoices"}
+                  <span className="flex items-center gap-1 font-medium">
+                    View all <ArrowRight className="size-3.5" aria-hidden />
+                  </span>
+                </Link>
+              </DialogClose>
+            )}
+          </>
         )}
       </div>
-    </DrawerContent>
+    </>
   );
 }
 
@@ -107,11 +132,9 @@ function InvoiceRow({ invoice, active }: { invoice: InvoiceSummary; active: bool
         >
           <span className="flex items-center gap-2">
             <span className="num text-[13px] font-medium">{invoice.number}</span>
-            <StatusBadge status={invoice.status} />
+            <StatusBadge status={displayStatus(invoice.status, invoice.is_overdue)} />
           </span>
-          <span className="text-right num text-[13px]">
-            {formatCents(parseScaled(invoice.total, 2) ?? 0n)}
-          </span>
+          <span className="text-right num text-[13px]">{formatMoney(invoice.total)}</span>
           <span className="truncate text-xs text-ink-3">{invoice.customer_name}</span>
           <span className="text-right text-xs text-ink-3">
             Due {formatIsoDate(invoice.due_date)}

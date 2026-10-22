@@ -18,16 +18,13 @@ type Props = {
   tone: "danger" | "warning";
   title: string;
   description: ReactNode;
-  /** The main action, placed on the right. Styled destructive for the danger tone. */
+  /** Main action, placed last. */
   confirm: Action;
-  /** Optional destructive escape hatch, set apart on the left (e.g. "Discard changes"). */
-  aside?: Action;
+  /** Optional destructive choice, placed before the main action (e.g. "Discard changes"). */
+  alternative?: Action;
 };
 
-/**
- * Confirmation for consequential actions. Built on AlertDialog: focus starts on Cancel and
- * clicking outside doesn't dismiss, so nothing irreversible happens by accident.
- */
+/** AlertDialog: focus starts on Cancel and an outside click doesn't dismiss. */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -35,7 +32,7 @@ export function ConfirmDialog({
   title,
   description,
   confirm,
-  aside,
+  alternative,
 }: Props) {
   const Icon = tone === "danger" ? Trash2 : TriangleAlert;
   return (
@@ -62,19 +59,18 @@ export function ConfirmDialog({
           </AlertDialog.Description>
 
           <DialogFooter>
-            {aside && (
-              <Button
-                variant="danger"
-                onClick={aside.onClick}
-                disabled={aside.busy || confirm.busy}
-                className="sm:mr-auto sm:-ml-3"
-              >
-                {aside.label}
-              </Button>
-            )}
             <AlertDialog.Cancel asChild>
               <Button disabled={confirm.busy}>Cancel</Button>
             </AlertDialog.Cancel>
+            {alternative && (
+              <Button
+                onClick={alternative.onClick}
+                disabled={alternative.busy || confirm.busy}
+                className="text-danger hover:border-danger/40 hover:bg-danger-soft"
+              >
+                {alternative.label}
+              </Button>
+            )}
             <Button
               variant={tone === "danger" ? "destructive" : "primary"}
               onClick={confirm.onClick}

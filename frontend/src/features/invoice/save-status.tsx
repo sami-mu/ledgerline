@@ -9,7 +9,6 @@ export type SaveState =
   | { kind: "error" }
   | { kind: "saved"; at: string };
 
-/** Quiet indicator next to the actions: tells the user whether their work is safe. */
 export function SaveStatus({ state, className }: { state: SaveState; className?: string }) {
   const now = useNow();
   const content = {

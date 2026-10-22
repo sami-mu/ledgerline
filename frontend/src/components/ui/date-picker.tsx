@@ -13,8 +13,10 @@ type Props = {
   id?: string;
   name?: string;
   ref?: Ref<HTMLButtonElement>;
-  /** Earliest selectable date (ISO). Earlier days are greyed out. */
+  /** Earliest selectable date (ISO). */
   min?: string;
+  /** Latest selectable date (ISO). */
+  max?: string;
   placeholder?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
@@ -37,12 +39,12 @@ function toIso(date: Date): string {
   return `${date.getFullYear()}-${m}-${d}`;
 }
 
-/** Button that opens a themed calendar. Same size and states as a text input. */
 export function DatePicker({
   value,
   onChange,
   onBlur,
   min,
+  max,
   placeholder = "Pick a date",
   ref,
   ...trigger
@@ -50,8 +52,9 @@ export function DatePicker({
   const [open, setOpen] = useState(false);
   const selected = parseIsoDate(value);
   const minDate = min ? parseIsoDate(min) : undefined;
+  const maxDate = max ? parseIsoDate(max) : undefined;
   const [today] = useState(() => toIso(new Date()));
-  const todayAllowed = !min || today >= min;
+  const todayAllowed = (!min || today >= min) && (!max || today <= max);
 
   return (
     <Popover
@@ -82,7 +85,10 @@ export function DatePicker({
           mode="single"
           selected={selected}
           defaultMonth={selected}
-          disabled={minDate ? { before: minDate } : undefined}
+          disabled={[
+            ...(minDate ? [{ before: minDate }] : []),
+            ...(maxDate ? [{ after: maxDate }] : []),
+          ]}
           onSelect={(date) => {
             if (date) onChange(toIso(date));
             setOpen(false);

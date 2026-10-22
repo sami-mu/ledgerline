@@ -1,13 +1,6 @@
 /**
- * Invoice arithmetic in exact integer units (BigInt), mirroring backend/app/services/money.py.
- *
- *   line total = round(quantity x unit price)        to cents, half up
- *   subtotal   = sum of line totals
- *   tax        = round((subtotal - discount) x rate) to cents, half up
- *   total      = subtotal - discount + tax
- *
- * Inputs are the raw strings from the form. Anything unparseable counts as zero so the
- * live preview keeps working while the user is mid-edit; the form schema reports the error.
+ * Invoice math in integer cents (BigInt), mirroring backend/app/services/money.py.
+ * Unparseable input counts as zero so the preview keeps working mid-edit.
  */
 
 export const QUANTITY_DECIMALS = 3;
@@ -16,7 +9,7 @@ export const TAX_RATE_DECIMALS = 3;
 
 const DECIMAL_PATTERN = /^\d+(?:\.\d*)?$|^\.\d+$/;
 
-/** "12.5" with 3 decimals -> 12500n. Returns null for anything that is not a plain decimal. */
+/** "12.5" with 3 decimals -> 12500n; null if not a plain decimal. */
 export function parseScaled(value: string, decimals: number): bigint | null {
   const text = value.trim();
   if (!DECIMAL_PATTERN.test(text)) return null;
@@ -25,7 +18,6 @@ export function parseScaled(value: string, decimals: number): bigint | null {
   return BigInt((whole || "0") + fraction.padEnd(decimals, "0"));
 }
 
-/** Integer division rounded half up, for non negative numerator and positive denominator. */
 function divRoundHalfUp(numerator: bigint, denominator: bigint): bigint {
   return (2n * numerator + denominator) / (2n * denominator);
 }
@@ -59,7 +51,7 @@ export function computeTotals(
 ): Totals {
   const subtotal = subtotalCents(lines);
   const requested = parseScaled(discount, MONEY_DECIMALS) ?? 0n;
-  // Saving is blocked when the discount exceeds the subtotal; the preview never goes negative.
+  // The form blocks saving; the preview just never goes negative.
   const applied = requested > subtotal ? subtotal : requested;
   const rate = parseScaled(taxRatePercent, TAX_RATE_DECIMALS) ?? 0n;
   const taxable = subtotal - applied;
@@ -72,14 +64,16 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
 export function formatCents(cents: bigint): string {
   const negative = cents < 0n;
   const abs = negative ? -cents : cents;
-  // Split so values beyond Number's exact range still format correctly.
   const dollars = abs / 100n;
   const rest = (abs % 100n).toString().padStart(2, "0");
   const whole = usd.format(Number(dollars)).replace(/\.00$/, "");
   return `${negative ? "-" : ""}${whole}.${rest}`;
 }
 
-/** Human formatting for quantities and rates: "6.5", "1", "8.875". */
+export function formatMoney(value: string): string {
+  return formatCents(parseScaled(value, MONEY_DECIMALS) ?? 0n);
+}
+
 export function formatDecimal(value: string): string {
   const text = value.trim();
   if (!DECIMAL_PATTERN.test(text)) return text || "0";
@@ -89,7 +83,7 @@ export function formatDecimal(value: string): string {
   return trimmed ? `${grouped}.${trimmed}` : grouped;
 }
 
-/** Keep only digits and a single decimal point while typing. Makes negatives impossible to type. */
+/** Digits and one dot only, so negatives can't be typed. */
 export function sanitizeDecimalInput(value: string): string {
   const cleaned = value.replace(/[^\d.]/g, "");
   const firstDot = cleaned.indexOf(".");

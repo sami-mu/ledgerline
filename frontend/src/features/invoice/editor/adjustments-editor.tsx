@@ -23,7 +23,11 @@ export function AdjustmentsEditor() {
 
       <dl className="mt-5 flex flex-col gap-1.5 rounded-md bg-subtle px-4 py-3 text-[13px]">
         <Row label="Subtotal" value={formatCents(totals.subtotal)} />
-        <Row label="Discount" value={`-${formatCents(totals.discount)}`} muted={!totals.discount} />
+        <Row
+          label="Discount"
+          value={totals.discount ? `-${formatCents(totals.discount)}` : formatCents(0n)}
+          muted={!totals.discount}
+        />
         <Row
           label={`Tax (${formatDecimal(taxRate || "0")}%)`}
           value={formatCents(totals.tax)}

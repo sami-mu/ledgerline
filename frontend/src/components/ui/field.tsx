@@ -15,13 +15,12 @@ type FieldProps = {
   hint?: ReactNode;
   optional?: boolean;
   className?: string;
-  /** Visually hide the label but keep it for screen readers (dense table rows). */
+  /** Hide the label visually but keep it for screen readers. */
   srOnlyLabel?: boolean;
   labelClassName?: string;
   children: ReactElement<ControlProps>;
 };
 
-/** Label, control, hint and error, wired together for assistive tech. */
 export function Field({
   label,
   error,

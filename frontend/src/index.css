@@ -1,9 +1,6 @@
 @import "tailwindcss";
 
-/*
- * Design tokens. "Precise ledger": cool paper, ink text, one ink-green accent.
- * The default Tailwind palette is removed so only these tokens can be used.
- */
+/* Design tokens. Tailwind's default palette is removed so only these can be used. */
 @theme {
   --color-*: initial;
   --color-transparent: transparent;
@@ -33,8 +30,7 @@
   --color-warning: #8a5a00;
   --color-warning-soft: #fbf3e2;
 
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
@@ -79,14 +75,12 @@
 
   body {
     @apply bg-canvas font-sans text-sm text-ink;
-    font-feature-settings: "ss02";
   }
 
   ::selection {
     @apply bg-accent-soft text-accent-ink;
   }
 
-  /* One focus style for the whole app: visible, on-brand, keyboard only. */
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
@@ -102,17 +96,13 @@
   }
 }
 
+/* Amounts and dates: same typeface, equal-width digits so columns line up. */
 @utility num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "zero" 0;
-  letter-spacing: -0.01em;
+  font-feature-settings: "tnum" 1;
 }
 
-/*
- * Scrollable panes. They are positioned so absolutely placed children (sr-only labels, for
- * one) stay inside them instead of stretching the page. Scrollbars are thin and quiet.
- */
+/* Positioned so absolute children (sr-only labels) stay inside instead of stretching the page. */
 @utility scroll-pane {
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -131,10 +121,7 @@
   text-transform: uppercase;
 }
 
-/*
- * Print: only the invoice. The app chrome carries print:hidden, and PrintableInvoice renders
- * an unscaled copy. Page margins come from @page so they repeat on every page.
- */
+/* Print only the invoice; @page margins repeat on every page. */
 @page {
   size: letter;
   margin: 0.5in 0.6in;

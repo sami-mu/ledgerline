@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** Slim application bar. Left: navigation and context. Right: page actions. */
 export function TopBar({
   start,
   end,

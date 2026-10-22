@@ -4,6 +4,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ChevronDown } from "lucide-react";
+import { controlStyles } from "@/components/ui/styles";
 import { cn } from "@/lib/utils";
 import { sanitizeDecimalInput } from "../money";
 import type { InvoiceFormValues } from "../schema";
@@ -78,7 +80,6 @@ type DecimalProps = Common & {
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
 
-/** Numeric text input: digits and one dot only, right aligned in tabular figures. */
 export function DecimalField({
   name,
   label,
@@ -153,7 +154,6 @@ function AffixInput({
   );
 }
 
-/** Calendar date picker bound to an ISO "YYYY-MM-DD" form value. */
 export function DateField({
   name,
   label,
@@ -161,7 +161,8 @@ export function DateField({
   optional,
   className,
   min,
-}: Common & { min?: string }) {
+  onPick,
+}: Common & { min?: string; onPick?: (value: string) => void }) {
   const { control } = useFormContext<InvoiceFormValues>();
   const error = useFieldError(name);
   return (
@@ -174,12 +175,62 @@ export function DateField({
             ref={field.ref}
             name={field.name}
             value={String(field.value ?? "")}
-            onChange={field.onChange}
+            onChange={(value) => {
+              field.onChange(value);
+              onPick?.(value);
+            }}
             onBlur={field.onBlur}
             min={min}
           />
         </Field>
       )}
     />
+  );
+}
+
+/** Native select, for keyboard and mobile pickers. */
+export function SelectField({
+  name,
+  label,
+  hint,
+  className,
+  options,
+  onValueChange,
+}: Common & {
+  options: readonly { value: string; label: string }[];
+  onValueChange?: (value: string) => void;
+}) {
+  const { register } = useFormContext<InvoiceFormValues>();
+  const registered = register(name, {
+    onChange: (event: { target: { value: string } }) => onValueChange?.(event.target.value),
+  });
+  return (
+    <Field label={label} hint={hint} error={useFieldError(name)} className={className}>
+      <SelectControl {...registered}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </SelectControl>
+    </Field>
+  );
+}
+
+/** The select receives Field's id and aria props directly, so its label stays attached. */
+function SelectControl({ className, children, ...props }: ComponentProps<"select">) {
+  return (
+    <div className="relative">
+      <select
+        {...props}
+        className={cn(controlStyles, "h-8 cursor-pointer appearance-none pr-8 pl-2.5", className)}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-ink-3"
+      />
+    </div>
   );
 }

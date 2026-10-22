@@ -1,4 +1,5 @@
 import { AdjustmentsEditor } from "./adjustments-editor";
+import { CustomFieldsEditor } from "./custom-fields-editor";
 import { EditorSection } from "./editor-section";
 import { TextAreaField, TextField } from "./form-fields";
 import { LineItemsEditor } from "./line-items-editor";
@@ -61,6 +62,7 @@ export function InvoiceEditor() {
 
       <LineItemsEditor />
       <AdjustmentsEditor />
+      <CustomFieldsEditor />
 
       <EditorSection
         id="notes"

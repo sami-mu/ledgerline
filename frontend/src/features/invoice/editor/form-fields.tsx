@@ -1,11 +1,12 @@
 import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
-import { Controller, get, useFormContext, useFormState, type FieldPath } from "react-hook-form";
+import { Controller, useFormContext, type FieldPath } from "react-hook-form";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { sanitizeDecimalInput } from "../money";
 import type { InvoiceFormValues } from "../schema";
+import { useFieldError } from "./use-field-error";
 
 type Name = FieldPath<InvoiceFormValues>;
 
@@ -18,11 +19,6 @@ type Common = {
   labelClassName?: string;
   className?: string;
 };
-
-export function useFieldError(name: Name): string | undefined {
-  const { errors } = useFormState<InvoiceFormValues>({ name });
-  return get(errors, name)?.message as string | undefined;
-}
 
 export function TextField({
   name,

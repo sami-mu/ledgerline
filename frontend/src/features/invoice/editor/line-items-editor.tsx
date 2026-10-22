@@ -14,7 +14,8 @@ import { emptyLineItem } from "../form-mapping";
 import { formatCents, lineTotalCents } from "../money";
 import type { InvoiceFormValues } from "../schema";
 import { EditorSection } from "./editor-section";
-import { DecimalField, TextField, useFieldError } from "./form-fields";
+import { DecimalField, TextField } from "./form-fields";
+import { useFieldError } from "./use-field-error";
 
 const MAX_LINES = 100;
 

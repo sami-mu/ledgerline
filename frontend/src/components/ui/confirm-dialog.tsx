@@ -43,25 +43,23 @@ export function ConfirmDialog({
       <AlertDialog.Portal>
         <AlertDialog.Overlay className={overlayStyles} />
         <AlertDialog.Content className={cn(modalPanelStyles, "max-w-[440px]")}>
-          <div className="flex gap-4 px-6 pt-6 pb-7">
+          <header className="flex items-center gap-3 px-6 pt-5">
             <span
               aria-hidden
               className={cn(
-                "grid size-9 shrink-0 place-items-center rounded-full",
+                "grid size-8 shrink-0 place-items-center rounded-full",
                 tone === "danger" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning",
               )}
             >
-              <Icon className="size-[18px]" />
+              <Icon className="size-4" />
             </span>
-            <div className="flex flex-col gap-1.5 pt-1">
-              <AlertDialog.Title className="text-base leading-6 font-semibold tracking-[-0.01em]">
-                {title}
-              </AlertDialog.Title>
-              <AlertDialog.Description className="text-[13px] leading-5 text-ink-3">
-                {description}
-              </AlertDialog.Description>
-            </div>
-          </div>
+            <AlertDialog.Title className="text-base leading-6 font-semibold tracking-[-0.01em]">
+              {title}
+            </AlertDialog.Title>
+          </header>
+          <AlertDialog.Description className="px-6 pt-3 pb-6 text-[13px] leading-5 text-ink-2">
+            {description}
+          </AlertDialog.Description>
 
           <DialogFooter>
             {aside && (

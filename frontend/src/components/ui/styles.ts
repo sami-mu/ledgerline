@@ -14,8 +14,11 @@ export const controlStyles = [
 /** Shared by Dialog and AlertDialog so every modal sits on the same dimmed backdrop. */
 export const overlayStyles = "fixed inset-0 z-40 animate-fade-in bg-ink/40";
 
-/** Centered modal panel. Grows with its content up to the viewport, then scrolls inside. */
+/**
+ * Modal panel, centered on a point slightly above the middle (optical center). The max height
+ * is tied to that point (2 x 44dvh - 2rem) so even a tall panel keeps a 1rem gap at the top.
+ */
 export const modalPanelStyles = cn(
-  "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col",
+  "fixed top-[44dvh] left-1/2 z-50 flex max-h-[calc(88dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col",
   "animate-pop-in overflow-hidden rounded-lg border border-line bg-surface shadow-pop focus:outline-none",
 );

@@ -84,7 +84,7 @@ export function DialogFooter({ className, ...props }: ComponentProps<"footer">) 
   return (
     <footer
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 border-t border-line bg-subtle px-6 py-4",
+        "flex shrink-0 flex-col-reverse gap-2 border-t border-line bg-subtle px-6 py-3",
         "sm:flex-row sm:items-center sm:justify-end",
         className,
       )}

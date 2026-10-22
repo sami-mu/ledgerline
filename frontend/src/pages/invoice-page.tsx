@@ -1,9 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { InvoiceWorkspace } from "@/features/invoice/workspace";
-import { duplicateValues, newInvoiceValues, toFormValues } from "@/features/invoice/form-mapping";
-import { api, ApiError } from "@/lib/api/client";
-import { queryKeys } from "@/lib/query";
+import { InvoiceWorkspace } from "@/components/invoice/workspace/invoice-workspace";
+import { duplicateValues, newInvoiceValues, toFormValues } from "@/components/invoice/form-mapping";
+import { ApiError } from "@/api/client";
+import { useInvoice, useLatestInvoice, useNextInvoiceNumber } from "@/hooks/api/use-invoices";
 import { NotFoundPage } from "./not-found-page";
 import { PageMessage } from "./page-message";
 
@@ -22,10 +21,7 @@ export function InvoicePage() {
 
 function ExistingInvoice({ id }: { id: number }) {
   const navigate = useNavigate();
-  const invoice = useQuery({
-    queryKey: queryKeys.invoices.detail(id),
-    queryFn: () => api.getInvoice(id),
-  });
+  const invoice = useInvoice(id);
 
   if (invoice.isPending) return <PageMessage loading title="Opening invoice" />;
   if (invoice.isError) {
@@ -47,28 +43,11 @@ function ExistingInvoice({ id }: { id: number }) {
 
 /** A blank invoice, or a copy of `sourceId` when duplicating. */
 function NewInvoice({ sourceId }: { sourceId?: number }) {
-  const nextNumber = useQuery({
-    queryKey: queryKeys.invoices.nextNumber,
-    queryFn: api.nextNumber,
-  });
-  // The most recently edited invoice, whose business details and terms carry over.
-  const latestParams = { sort: "updated_at", direction: "desc", page_size: 1 } as const;
-  const list = useQuery({
-    queryKey: queryKeys.invoices.list(latestParams),
-    queryFn: ({ signal }) => api.listInvoices(latestParams, signal),
-    enabled: sourceId === undefined,
-  });
-  const latestId = sourceId ?? list.data?.items[0]?.id;
-  const latest = useQuery({
-    queryKey: queryKeys.invoices.detail(latestId ?? 0),
-    queryFn: () => api.getInvoice(latestId!),
-    enabled: latestId !== undefined,
-  });
-
+  const nextNumber = useNextInvoiceNumber();
+  const source = useInvoice(sourceId);
+  const latest = useLatestInvoice(sourceId === undefined);
   const loading =
-    nextNumber.isPending ||
-    (sourceId === undefined && list.isPending) ||
-    (latestId !== undefined && latest.isPending);
+    nextNumber.isPending || (sourceId === undefined ? latest.isPending : source.isPending);
   if (loading) return <PageMessage loading title="Preparing a new invoice" />;
   if (nextNumber.isError)
     return (
@@ -79,9 +58,8 @@ function NewInvoice({ sourceId }: { sourceId?: number }) {
       />
     );
   const number = nextNumber.data.number;
-  const values =
-    sourceId !== undefined && latest.data
-      ? duplicateValues(latest.data, number)
-      : newInvoiceValues(number, latest.data);
+  const values = source.data
+    ? duplicateValues(source.data, number)
+    : newInvoiceValues(number, latest.data);
   return <InvoiceWorkspace defaultValues={values} />;
 }

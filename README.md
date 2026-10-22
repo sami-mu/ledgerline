@@ -31,11 +31,15 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Data is stored in SQLite (`backend/invoices.db`, created on first start). For demo data: `uv run python -m app.seed --count 40`.
+For demo data: `uv run python -m app.seed --count 40` (in `backend/`).
+
+## Storage
+
+SQLite through SQLAlchemy, in `backend/invoices.db`, created on first start. The location is set by `DATABASE_URL` in `.env`, and all queries live in the repository layer, so moving to Postgres is mostly a connection-string change. To start fresh, stop the backend and delete the file.
 
 ## Email
 
-Set the SMTP values in `backend/.env` and restart the backend. Any provider works, for example:
+Copy `backend/.env.example` to `backend/.env` (placeholders only, no secrets are committed), set the SMTP values and restart the backend. Credentials stay on the server. Any provider works, for example:
 
 | Provider | Host | Port | Security |
 | --- | --- | --- | --- |
@@ -47,7 +51,7 @@ For the local server: `uvx --from aiosmtpd python -m aiosmtpd -n -l 127.0.0.1:10
 
 ## Totals
 
-Each line is rounded to the cent, then summed; the fixed discount comes off the subtotal; tax is calculated on the remainder and rounded. So `2 × $50 - $10 + 10% = $99.00`. The same rules run in `frontend/src/features/invoice/money.ts` (for the preview) and `backend/app/services/money.py` (the source of truth). No floats anywhere.
+Each line is rounded to the cent, then summed; the fixed discount comes off the subtotal; tax is calculated on the remainder and rounded. So `2 × $50 - $10 + 10% = $99.00`. The same rules run in `frontend/src/lib/money.ts` (for the preview) and `backend/app/services/money.py` (the source of truth). No floats anywhere.
 
 ## Structure
 
@@ -67,13 +71,26 @@ Each line is rounded to the cent, then summed; the fixed discount comes off the 
 │   └── tests/
 └── frontend/
     └── src/
-        ├── components/     # UI primitives and app shell
-        ├── features/       # invoice editor, preview, list, shortcuts
-        ├── hooks/
-        ├── lib/            # API client (types generated from OpenAPI), query setup
-        ├── pages/
-        └── main.tsx
+        ├── api/            # endpoint functions per domain, shared HTTP client, generated types
+        ├── hooks/api/      # React Query hooks; the only callers of api/
+        ├── components/
+        │   ├── ui/         # restyled shadcn/ui primitives
+        │   ├── app/        # top bar, brand, shortcuts
+        │   ├── invoice/    # editor, preview, workspace, actions
+        │   └── invoices/   # list: stats, filters, table, pagination
+        ├── form-schemas/   # Zod schemas mirroring the API rules
+        ├── lib/            # money, dates, terms, query client
+        └── pages/          # thin route components
 ```
+
+## Decisions
+
+- **FastAPI in layers:** thin routes, business rules in services, queries in repositories.
+- **Exact money:** Decimals on the server, integer cents in the browser, never floats.
+- **Invoices keep a copy of customer details,** so editing a customer never changes an issued invoice.
+- **Explicit save** with an unsaved-changes guard, rather than autosave, for financial documents.
+- **Soft delete** with confirmation and undo; paid invoices are locked.
+- **Frontend layers:** endpoint functions in `api/`, React Query hooks in `hooks/api/`, components never call the API directly.
 
 ## Tests
 
@@ -81,6 +98,11 @@ Each line is rounded to the cent, then summed; the fixed discount comes off the 
 cd backend && uv run pytest
 cd frontend && npm test && npm run typecheck && npm run lint
 ```
+
+## AI tools used
+
+Claude, as a pair programmer.
+
 ## Time spent
 
 About 3 hours.

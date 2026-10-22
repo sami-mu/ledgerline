@@ -1,4 +1,5 @@
-{#- Email clients ignore most CSS, so this uses tables and inline styles only. -#}
+{#- Email clients ignore most CSS, so this uses tables and inline styles only.
+    The full invoice travels as the PDF attachment; the body is a short summary. -#}
 {% set sans = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" %}
 {% set mono = "'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace" %}
 {% set ink = "#0e1217" %}{% set ink2 = "#3a434e" %}{% set ink3 = "#5f6975" %}
@@ -14,81 +15,40 @@
 <div style="display:none;max-height:0;overflow:hidden;">Invoice {{ invoice.number }} for {{ invoice.totals.total | usd }}, due {{ invoice.due_date | long_date }}.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;">
 <tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid {{ line }};border-radius:6px;font-family:{{ sans }};color:{{ ink }};">
+<table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:100%;max-width:520px;background:#ffffff;border:1px solid {{ line }};border-radius:6px;font-family:{{ sans }};color:{{ ink }};">
 
   {% if message %}
   <tr><td style="padding:28px 32px 0;font-size:14px;line-height:22px;color:{{ ink2 }};white-space:pre-line;">{{ message }}</td></tr>
   {% endif %}
 
-  <tr><td style="padding:28px 32px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td valign="top" style="font-size:17px;line-height:22px;font-weight:600;">{{ invoice.business_name }}</td>
-        <td valign="top" align="right" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Invoice<br>
-          <span style="font-family:{{ mono }};font-size:15px;letter-spacing:0;text-transform:none;color:{{ ink }};">{{ invoice.number }}</span></td>
-      </tr>
-    </table>
-  </td></tr>
-
-  <tr><td style="padding:20px 32px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fa;border-radius:5px;">
-      <tr><td style="padding:16px 18px;">
-        <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Amount due</div>
-        <div style="font-family:{{ mono }};font-size:26px;line-height:34px;color:{{ accent }};">{{ invoice.totals.total | usd }}</div>
-        <div style="font-size:13px;color:{{ ink3 }};">Due {{ invoice.due_date | long_date }}</div>
+  <tr><td style="padding:24px 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid {{ line }};border-radius:5px;">
+      <tr><td style="padding:18px 20px;border-bottom:1px solid {{ line }};">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td valign="top">
+              <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Amount due</div>
+              <div style="font-family:{{ mono }};font-size:26px;line-height:34px;color:{{ accent }};">{{ invoice.totals.total | usd }}</div>
+              <div style="font-size:13px;color:{{ ink3 }};">Due {{ invoice.due_date | long_date }}</div>
+            </td>
+            <td valign="top" align="right" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Invoice<br>
+              <span style="font-family:{{ mono }};font-size:14px;letter-spacing:0;text-transform:none;color:{{ ink }};">{{ invoice.number }}</span></td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:14px 20px;font-size:13px;line-height:22px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="color:{{ ink3 }};">From</td><td align="right">{{ invoice.business_name }}</td></tr>
+          <tr><td style="color:{{ ink3 }};">Billed to</td><td align="right">{{ invoice.customer_name }}</td></tr>
+          <tr><td style="color:{{ ink3 }};">Issued</td><td align="right">{{ invoice.issue_date | long_date }}</td></tr>
+        </table>
       </td></tr>
     </table>
   </td></tr>
 
-  <tr><td style="padding:20px 32px 0;font-size:13px;line-height:20px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td valign="top" width="50%" style="padding-right:12px;">
-          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};padding-bottom:4px;">Billed to</div>
-          <div style="font-weight:600;">{{ invoice.customer_name }}</div>
-          {% if invoice.customer_address %}<div style="color:{{ ink2 }};white-space:pre-line;">{{ invoice.customer_address }}</div>{% endif %}
-        </td>
-        <td valign="top" width="50%">
-          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};padding-bottom:4px;">Details</div>
-          <div><span style="color:{{ ink3 }};">Issued</span> {{ invoice.issue_date | long_date }}</div>
-          {% for field in custom_fields %}
-          <div><span style="color:{{ ink3 }};">{{ field.label }}</span> {{ field.value }}</div>
-          {% endfor %}
-        </td>
-      </tr>
-    </table>
+  <tr><td style="padding:18px 32px 0;font-size:13px;line-height:20px;color:{{ ink2 }};">
+    The full invoice is attached as <strong style="color:{{ ink }};">{{ filename }}</strong>.
   </td></tr>
-
-  <tr><td style="padding:24px 32px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;line-height:20px;border-collapse:collapse;">
-      <tr>
-        <td style="padding:0 0 8px;border-bottom:1px solid {{ ink }};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Description</td>
-        <td align="right" style="padding:0 0 8px;border-bottom:1px solid {{ ink }};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{ ink3 }};">Amount</td>
-      </tr>
-      {% for item in invoice.line_items %}
-      <tr>
-        <td style="padding:10px 12px 10px 0;border-bottom:1px solid {{ line }};">{{ item.description }}
-          <div style="font-family:{{ mono }};font-size:12px;color:{{ ink3 }};">{{ item.quantity | plain }} x {{ item.unit_price | usd }}</div></td>
-        <td align="right" valign="top" style="padding:10px 0;border-bottom:1px solid {{ line }};font-family:{{ mono }};">{{ item.line_total | usd }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-  </td></tr>
-
-  <tr><td style="padding:12px 32px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;line-height:20px;">
-      <tr><td style="padding:3px 0;color:{{ ink2 }};">Subtotal</td><td align="right" style="font-family:{{ mono }};">{{ invoice.totals.subtotal | usd }}</td></tr>
-      {% if invoice.totals.discount > 0 %}
-      <tr><td style="padding:3px 0;color:{{ ink2 }};">Discount</td><td align="right" style="font-family:{{ mono }};">-{{ invoice.totals.discount | usd }}</td></tr>
-      {% endif %}
-      <tr><td style="padding:3px 0;color:{{ ink2 }};">Tax ({{ invoice.tax_rate | plain }}%)</td><td align="right" style="font-family:{{ mono }};">{{ invoice.totals.tax | usd }}</td></tr>
-      <tr><td style="padding:10px 0 0;border-top:1px solid {{ ink }};font-weight:600;">Total due</td><td align="right" style="padding:10px 0 0;border-top:1px solid {{ ink }};font-family:{{ mono }};font-size:15px;">{{ invoice.totals.total | usd }}</td></tr>
-    </table>
-  </td></tr>
-
-  {% if invoice.notes %}
-  <tr><td style="padding:24px 32px 0;font-size:13px;line-height:20px;color:{{ ink2 }};white-space:pre-line;">{{ invoice.notes }}</td></tr>
-  {% endif %}
 
   <tr><td style="padding:28px 32px 28px;">
     <div style="border-top:1px solid {{ line }};padding-top:12px;font-size:12px;line-height:18px;color:{{ ink3 }};">

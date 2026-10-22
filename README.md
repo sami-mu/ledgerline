@@ -14,12 +14,12 @@ A browser-based invoice generator for small businesses. Edit an invoice on the l
 - **Custom fields:** label and value, with edit, show/hide, reorder and remove. Visible fields appear in the invoice's Details block. Hidden fields are saved but never printed or emailed. They never affect totals.
 - **Live preview and PDF:** the US Letter preview updates on every keystroke. Print (or "Save as PDF") prints only the invoice, with no controls and no hidden fields.
 - **Saving:** invoices are stored by a FastAPI backend in SQLite. Each one has its own URL (`/invoices/3`), so a reload brings back the saved invoice.
-- **Email:** sends the invoice as an HTML email (with a plain-text version) over SMTP. Credentials stay on the server. The invoice is then marked as Sent.
+- **Email with PDF:** sends a short HTML email (with a plain-text version) over SMTP, with the invoice attached as a PDF that matches the printed layout, including "Page 1 of 2" footers. Credentials stay on the server. The invoice is then marked as Sent.
 - **Responsive:** side by side on desktop, an Edit / Preview toggle on tablets and phones.
 
 ## Quick start
 
-You need Python 3.11+, [uv](https://docs.astral.sh/uv/) and Node 20+.
+You need Python 3.11+, [uv](https://docs.astral.sh/uv/) and Node 20+. PDF generation uses WeasyPrint, which needs the Pango library: it is already present on most Linux desktops; on macOS run `brew install pango`; on Debian or Ubuntu servers `apt install libpango-1.0-0 libpangoft2-1.0-0`.
 
 ```bash
 # 1. Backend (http://127.0.0.1:8000, API docs at /docs)
@@ -108,7 +108,7 @@ backend/
     repositories/  data access only
     services/      business rules: invoices, money, email rendering, SMTP transport
     api/           thin FastAPI routers and dependency wiring
-    templates/     email templates (HTML and plain text)
+    templates/     email templates (HTML and plain text) and the PDF invoice template
   tests/           money, API and email tests (SQLite in memory, fake email sender)
 frontend/
   src/
@@ -125,14 +125,14 @@ frontend/
 - **Design.** The aim was a "precise ledger" look rather than a template: cool paper tones, near-black ink, one deep green accent used only for primary actions and focus, hairline rules, and IBM Plex Mono with tabular figures for every amount so columns line up. shadcn/ui patterns are used for accessible behaviour (dialogs, menus, switch, tooltips) but fully restyled with the project's own tokens, and Tailwind's default colour palette is removed so only those tokens can be used. All text meets WCAG AA contrast.
 - **Explicit save, not autosave.** For financial documents, a clear "Unsaved changes" / "Saved 2 min ago" state felt more trustworthy than silent saving. Leaving with unsaved changes asks first (inside the app and on tab close). Ctrl/Cmd+S saves.
 - **Small conveniences.** A new invoice gets the next number and copies the business details from your latest invoice. The send dialog pre-fills the recipient, subject and a short message. Sending with unsaved edits saves first.
-- **The email contains the invoice in its body**, using table-based HTML that renders in common email clients, plus a plain-text version. This covers the brief without a server-side PDF engine. A PDF attachment is listed under unfinished work.
+- **A short email plus a PDF attachment**, as invoicing products do it. The body has the message and an amount-due summary in table-based HTML that renders in common email clients. The invoice itself is a PDF that customers can file, forward and reconcile. WeasyPrint renders it on the server from a template that mirrors the on-screen invoice, with IBM Plex embedded (SIL Open Font License, bundled in `backend/app/templates/pdf/fonts`).
 - **Reordering uses Move up / Move down** in each row's menu rather than drag and drop. It works with the keyboard and screen readers and is less code.
 - **Print uses a separate, unscaled copy of the invoice** that exists only in print styles. The screen preview can then scale freely, and `@page` margins repeat on every page.
 
 ## Testing
 
 ```bash
-cd backend && uv run pytest        # 24 tests: money rules, CRUD, validation, conflicts, email
+cd backend && uv run pytest        # 24 tests: money rules, CRUD, validation, conflicts, email and PDF
 cd frontend && npm test            # money math, rounding, parsing and formatting
 cd frontend && npm run typecheck && npm run lint
 ```
@@ -164,9 +164,9 @@ About _X_ hours, within the 3 hour cap.
 
 ## Unfinished work and next steps
 
-- **PDF attachment on emails.** Generate a server-side PDF (for example with WeasyPrint) that matches the print layout, and attach it.
+- **Download PDF button.** The server already renders the PDF for emails; a `GET /api/invoices/{id}/pdf` endpoint would let users download the same file directly.
 - **Payment tracking.** Paid, partially paid and overdue states, plus a dashboard of outstanding amounts.
 - **Accounts and businesses.** Authentication, several businesses per user, saved customers with autocomplete.
 - **Production setup.** Postgres with Alembic migrations, Docker, deployment, rate limiting on sends, and delivery or bounce webhooks from the email provider.
 - **End-to-end tests** with Playwright for the main flows (create, validate, save, reload, send).
-- **More invoice features.** Drag-and-drop reordering, per-line tax, currencies other than USD, page numbers on multi-page prints, and a logo upload.
+- **More invoice features.** Drag-and-drop reordering, per-line tax, currencies other than USD, page numbers on browser prints (the emailed PDF already has them), and a logo upload.

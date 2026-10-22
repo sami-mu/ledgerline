@@ -1,44 +1,16 @@
-from datetime import UTC, date, datetime
-from decimal import Decimal
+import asyncio
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
-from pathlib import Path
-
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.core.config import Settings
 from app.core.errors import EmailNotConfiguredError
 from app.schemas.email import SendInvoiceIn
 from app.schemas.invoice import InvoiceOut
 from app.services.email_sender import EmailSender
+from app.services.invoice_pdf import pdf_filename, render_invoice_pdf
 from app.services.invoice_service import InvoiceService
-
-TEMPLATES = Path(__file__).resolve().parent.parent / "templates" / "email"
-
-
-def _usd(value: Decimal) -> str:
-    return f"${value:,.2f}"
-
-
-def _plain_decimal(value: Decimal) -> str:
-    # 6.500 -> 6.5, 2 -> 2, never scientific notation.
-    text = format(value, "f")
-    return text.rstrip("0").rstrip(".") if "." in text else text
-
-
-def _long_date(value: date) -> str:
-    return f"{value:%b} {value.day}, {value.year}"
-
-
-def _build_environment() -> Environment:
-    env = Environment(
-        loader=FileSystemLoader(TEMPLATES),
-        autoescape=select_autoescape(["html"]),
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-    env.filters.update(usd=_usd, plain=_plain_decimal, long_date=_long_date)
-    return env
+from app.services.rendering import environment
 
 
 class InvoiceEmailService:
@@ -46,7 +18,7 @@ class InvoiceEmailService:
         self.invoices = invoices
         self.sender = sender
         self.settings = settings
-        self.env = _build_environment()
+        self.env = environment()
 
     async def send(self, invoice_id: int, data: SendInvoiceIn) -> InvoiceOut:
         if not self.settings.smtp_configured:
@@ -54,15 +26,14 @@ class InvoiceEmailService:
                 "Email isn't set up on the server yet. Add the SMTP settings to backend/.env."
             )
         invoice = self.invoices.get(invoice_id)
-        await self.sender.send(self.build_message(invoice, data))
+        # PDF rendering is CPU bound; keep it off the event loop.
+        pdf = await asyncio.to_thread(render_invoice_pdf, invoice)
+        await self.sender.send(self.build_message(invoice, data, pdf))
         return self.invoices.mark_sent(invoice_id, data.to, datetime.now(UTC))
 
-    def build_message(self, invoice: InvoiceOut, data: SendInvoiceIn) -> EmailMessage:
-        context = {
-            "invoice": invoice,
-            "message": data.message,
-            "custom_fields": [f for f in invoice.custom_fields if f.visible],
-        }
+    def build_message(self, invoice: InvoiceOut, data: SendInvoiceIn, pdf: bytes) -> EmailMessage:
+        filename = pdf_filename(invoice)
+        context = {"invoice": invoice, "message": data.message, "filename": filename}
         message = EmailMessage()
         message["Subject"] = data.subject
         message["From"] = formataddr(
@@ -72,8 +43,9 @@ class InvoiceEmailService:
         if invoice.business_email:
             message["Reply-To"] = invoice.business_email
         message["Message-ID"] = make_msgid(domain=self.settings.mail_from_address.split("@")[-1])
-        message.set_content(self.env.get_template("invoice.txt").render(context))
+        message.set_content(self.env.get_template("email/invoice.txt").render(context))
         message.add_alternative(
-            self.env.get_template("invoice.html").render(context), subtype="html"
+            self.env.get_template("email/invoice.html").render(context), subtype="html"
         )
+        message.add_attachment(pdf, maintype="application", subtype="pdf", filename=filename)
         return message

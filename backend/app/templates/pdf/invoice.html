@@ -1,0 +1,156 @@
+{#- Server-side copy of the invoice paper (frontend/src/features/invoice/preview/invoice-paper.tsx),
+    rendered to PDF by WeasyPrint. Keep the two in step. -#}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invoice {{ invoice.number }}</title>
+<style>
+  @font-face { font-family: "Plex Sans"; font-weight: 400; src: url("fonts/ibm-plex-sans-latin-400-normal.woff"); }
+  @font-face { font-family: "Plex Sans"; font-weight: 500; src: url("fonts/ibm-plex-sans-latin-500-normal.woff"); }
+  @font-face { font-family: "Plex Sans"; font-weight: 600; src: url("fonts/ibm-plex-sans-latin-600-normal.woff"); }
+  @font-face { font-family: "Plex Mono"; font-weight: 400; src: url("fonts/ibm-plex-mono-latin-400-normal.woff"); }
+  @font-face { font-family: "Plex Mono"; font-weight: 500; src: url("fonts/ibm-plex-mono-latin-500-normal.woff"); }
+
+  @page {
+    size: letter;
+    margin: 0.6in 0.65in 0.75in;
+    @bottom-left {
+      content: "{{ invoice.business_name | css_string }}";
+      font: 400 8pt "Plex Sans"; color: #5f6975;
+    }
+    @bottom-right {
+      content: "{{ invoice.number | css_string }}  ·  Page " counter(page) " of " counter(pages);
+      font: 400 8pt "Plex Sans"; color: #5f6975;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { font: 400 9.5pt/1.55 "Plex Sans", sans-serif; color: #0e1217; }
+  body { margin: 0; }
+  p { margin: 0; }
+  .num { font-family: "Plex Mono", monospace; letter-spacing: -0.01em; }
+  .caps { font-size: 7pt; line-height: 1.4; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #5f6975; }
+  .muted { color: #3a434e; }
+  .faint { color: #5f6975; }
+  .pre { white-space: pre-line; }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .business { font-size: 14.5pt; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+  .number { margin-top: 3pt; font-size: 14.5pt; line-height: 1.2; font-weight: 500; text-align: right; }
+  .address { margin-top: 5pt; }
+
+  .parties { display: flex; gap: 22pt; margin-top: 34pt; padding-top: 14pt; border-top: 0.75pt solid #0e1217; }
+  .parties > div { flex: 1.25; min-width: 0; }
+  .parties > .billed { flex: 1.05; }
+  .parties > .due { flex: 0.85; }
+  .parties h3 { margin: 0 0 6pt; }
+  .details { border-collapse: collapse; }
+  .details td { padding: 0 10pt 1.5pt 0; vertical-align: top; }
+  .details td:first-child { white-space: nowrap; }
+  .due { text-align: right; }
+  .due-amount { font-size: 18pt; line-height: 1; font-weight: 500; letter-spacing: -0.02em; color: #0d3d2b; }
+  .due-date { margin-top: 6pt; }
+
+  table.items { width: 100%; margin-top: 34pt; border-collapse: collapse; }
+  .items th { padding: 0 0 6pt; border-bottom: 0.75pt solid #0e1217; text-align: left; }
+  .items td { padding: 7pt 0; border-bottom: 0.5pt solid #e1e5ea; vertical-align: top; }
+  .items td.desc { padding-right: 16pt; }
+  .items .r { text-align: right; }
+  .items tr { break-inside: avoid; }
+  .w-qty { width: 52pt; } .w-money { width: 86pt; }
+
+  .totals { width: 205pt; margin: 16pt 0 0 auto; border-collapse: collapse; break-inside: avoid; }
+  .totals td { padding: 2.5pt 0; }
+  .totals td:last-child { text-align: right; }
+  .totals .grand td { padding-top: 8pt; border-top: 0.75pt solid #0e1217; }
+  .totals .grand td:first-child { font-weight: 600; }
+  .totals .grand td:last-child { font-size: 11.5pt; font-weight: 500; }
+
+  .notes { margin-top: 36pt; max-width: 60ch; break-inside: avoid; }
+  .notes h3 { margin: 0 0 4pt; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <p class="business">{{ invoice.business_name }}</p>
+      {% if invoice.business_address or invoice.business_email %}
+      <div class="address muted">
+        {% if invoice.business_address %}<p class="pre">{{ invoice.business_address }}</p>{% endif %}
+        {% if invoice.business_email %}<p>{{ invoice.business_email }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div>
+      <p class="caps" style="text-align:right">Invoice</p>
+      <p class="number num">{{ invoice.number }}</p>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="billed">
+      <h3 class="caps">Billed to</h3>
+      <p style="font-weight:500">{{ invoice.customer_name }}</p>
+      {% if invoice.customer_address or invoice.customer_email %}
+      <div class="address muted">
+        {% if invoice.customer_address %}<p class="pre">{{ invoice.customer_address }}</p>{% endif %}
+        {% if invoice.customer_email %}<p>{{ invoice.customer_email }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div>
+      <h3 class="caps">Details</h3>
+      <table class="details">
+        <tr><td class="faint">Issued</td><td>{{ invoice.issue_date | long_date }}</td></tr>
+        <tr><td class="faint">Due</td><td>{{ invoice.due_date | long_date }}</td></tr>
+        {% for field in custom_fields %}
+        <tr><td class="faint">{{ field.label }}</td><td>{{ field.value or "-" }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="due">
+      <h3 class="caps">Amount due</h3>
+      <p class="due-amount num">{{ invoice.totals.total | usd }}</p>
+      <p class="due-date faint">Due {{ invoice.due_date | long_date }}</p>
+    </div>
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th class="caps">Description</th>
+        <th class="caps r w-qty">Qty</th>
+        <th class="caps r w-money">Unit price</th>
+        <th class="caps r w-money">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in invoice.line_items %}
+      <tr>
+        <td class="desc">{{ item.description }}</td>
+        <td class="r num">{{ item.quantity | plain }}</td>
+        <td class="r num">{{ item.unit_price | usd }}</td>
+        <td class="r num">{{ item.line_total | usd }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td class="muted">Subtotal</td><td class="num">{{ invoice.totals.subtotal | usd }}</td></tr>
+    {% if invoice.totals.discount > 0 %}
+    <tr><td class="muted">Discount</td><td class="num">-{{ invoice.totals.discount | usd }}</td></tr>
+    {% endif %}
+    <tr><td class="muted">Tax ({{ invoice.tax_rate | plain }}%)</td><td class="num">{{ invoice.totals.tax | usd }}</td></tr>
+    <tr class="grand"><td>Total due</td><td class="num">{{ invoice.totals.total | usd }}</td></tr>
+  </table>
+
+  {% if invoice.notes %}
+  <div class="notes">
+    <h3 class="caps">Notes</h3>
+    <p class="pre muted">{{ invoice.notes }}</p>
+  </div>
+  {% endif %}
+</body>
+</html>

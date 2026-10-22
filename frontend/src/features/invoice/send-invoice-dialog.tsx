@@ -38,7 +38,7 @@ function defaults(invoice: InvoiceFormValues, totals: Totals): SendInvoiceIn {
   return {
     to: invoice.customer_email,
     subject: `Invoice ${invoice.number} from ${from}`,
-    message: `${greeting}\n\nPlease find invoice ${invoice.number} for ${formatCents(totals.total)} below${due ? `, due ${due}` : ""}.\n\nThank you,\n${from}`,
+    message: `${greeting}\n\nPlease find invoice ${invoice.number} for ${formatCents(totals.total)} attached${due ? `, due ${due}` : ""}.\n\nThank you,\n${from}`,
   };
 }
 
@@ -70,7 +70,7 @@ export function SendInvoiceDialog({
     <Dialog open={open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
       <DialogContent
         title={`Send invoice ${invoice.number}`}
-        description="Your customer receives the full invoice in the email body."
+        description="Your customer gets a short email with the invoice attached as a PDF."
       >
         <form noValidate onSubmit={form.handleSubmit(onSend)} className="flex min-h-0 flex-col">
           <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pt-5 pb-6">

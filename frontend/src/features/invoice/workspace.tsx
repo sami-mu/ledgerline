@@ -312,28 +312,27 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
       <ConfirmDialog
         open={blocker.state === "blocked"}
         onOpenChange={(open) => !open && blocker.reset?.()}
+        tone="warning"
         title="Leave without saving?"
-        description="Your changes to this invoice haven't been saved."
-        confirmLabel="Discard changes"
-        onConfirm={() => blocker.proceed?.()}
-        extra={
-          <Button
-            variant="primary"
-            disabled={saveMutation.isPending}
-            onClick={() => void save(() => blocker.proceed?.())}
-          >
-            Save and leave
-          </Button>
-        }
+        description="Your changes to this invoice haven't been saved. Save them before you go, or discard them."
+        confirm={{
+          label: "Save and leave",
+          busy: saveMutation.isPending,
+          onClick: () => void save(() => blocker.proceed?.()),
+        }}
+        aside={{ label: "Discard changes", onClick: () => blocker.proceed?.() }}
       />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
+        tone="danger"
         title={`Delete invoice ${invoice?.number ?? ""}?`}
-        description="This permanently removes the invoice and its line items. It can't be undone."
-        confirmLabel="Delete invoice"
-        busy={deleteMutation.isPending}
-        onConfirm={() => void deleteInvoice()}
+        description="This permanently removes the invoice, its line items and custom fields. It can't be undone."
+        confirm={{
+          label: "Delete invoice",
+          busy: deleteMutation.isPending,
+          onClick: () => void deleteInvoice(),
+        }}
       />
     </FormProvider>
   );

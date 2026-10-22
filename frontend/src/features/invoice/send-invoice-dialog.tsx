@@ -72,8 +72,8 @@ export function SendInvoiceDialog({
         title={`Send invoice ${invoice.number}`}
         description="Your customer receives the full invoice in the email body."
       >
-        <form noValidate onSubmit={form.handleSubmit(onSend)}>
-          <div className="flex flex-col gap-4 px-5 py-4">
+        <form noValidate onSubmit={form.handleSubmit(onSend)} className="flex min-h-0 flex-col">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pt-5 pb-6">
             {emailOff && (
               <div
                 role="alert"
@@ -115,7 +115,7 @@ export function SendInvoiceDialog({
             </Field>
           </div>
 
-          <DialogFooter className="justify-between">
+          <DialogFooter className="sm:justify-between">
             <p className="text-xs text-ink-3">
               {needsSave ? "Your changes are saved first." : "Hidden custom fields are left out."}
             </p>

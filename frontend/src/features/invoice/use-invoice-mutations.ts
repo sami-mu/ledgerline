@@ -1,5 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type InvoiceIn, type InvoiceOut, type InvoiceSummary } from "@/lib/api/client";
+import {
+  api,
+  type InvoiceIn,
+  type InvoiceOut,
+  type InvoiceSummary,
+  type SendInvoiceIn,
+} from "@/lib/api/client";
 import { queryKeys } from "@/lib/query";
 
 export function useSaveInvoice(invoiceId: number | undefined) {
@@ -27,6 +33,17 @@ export function useDeleteInvoice() {
       );
       void queryClient.invalidateQueries({ queryKey: queryKeys.invoices, exact: true });
       void queryClient.invalidateQueries({ queryKey: queryKeys.nextNumber });
+    },
+  });
+}
+
+export function useSendInvoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: SendInvoiceIn }) => api.sendInvoice(id, body),
+    onSuccess: (sent: InvoiceOut) => {
+      queryClient.setQueryData(queryKeys.invoice(sent.id), sent);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices, exact: true });
     },
   });
 }

@@ -4,6 +4,7 @@ type Schemas = components["schemas"];
 export type InvoiceIn = Schemas["InvoiceIn"];
 export type InvoiceOut = Schemas["InvoiceOut"];
 export type InvoiceSummary = Schemas["InvoiceSummary"];
+export type SendInvoiceIn = Schemas["SendInvoiceIn"];
 
 /** A failed API call, with server field errors keyed by dotted path ("line_items.0.quantity"). */
 export class ApiError extends Error {
@@ -72,6 +73,8 @@ export const api = {
     request<InvoiceOut>("/api/invoices", { method: "POST", body: JSON.stringify(body) }),
   updateInvoice: (id: number, body: InvoiceIn) =>
     request<InvoiceOut>(`/api/invoices/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  sendInvoice: (id: number, body: SendInvoiceIn) =>
+    request<InvoiceOut>(`/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify(body) }),
   deleteInvoice: (id: number) => request<void>(`/api/invoices/${id}`, { method: "DELETE" }),
   health: () => request<Schemas["HealthOut"]>("/api/health"),
 };

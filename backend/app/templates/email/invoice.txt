@@ -1,0 +1,36 @@
+{% if message %}
+{{ message }}
+
+{% endif %}
+Invoice {{ invoice.number }} from {{ invoice.business_name }}
+Amount due: {{ invoice.totals.total | usd }}
+Due: {{ invoice.due_date | long_date }}
+
+Billed to: {{ invoice.customer_name }}
+Issued: {{ invoice.issue_date | long_date }}
+{% for field in custom_fields %}
+{{ field.label }}: {{ field.value }}
+{% endfor %}
+
+{% for item in invoice.line_items %}
+- {{ item.description }}: {{ item.quantity | plain }} x {{ item.unit_price | usd }} = {{ item.line_total | usd }}
+{% endfor %}
+
+Subtotal: {{ invoice.totals.subtotal | usd }}
+{% if invoice.totals.discount > 0 %}
+Discount: -{{ invoice.totals.discount | usd }}
+{% endif %}
+Tax ({{ invoice.tax_rate | plain }}%): {{ invoice.totals.tax | usd }}
+Total due: {{ invoice.totals.total | usd }}
+{% if invoice.notes %}
+
+{{ invoice.notes }}
+{% endif %}
+
+{{ invoice.business_name }}
+{% if invoice.business_address %}
+{{ invoice.business_address }}
+{% endif %}
+{% if invoice.business_email %}
+{{ invoice.business_email }}
+{% endif %}

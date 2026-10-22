@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
-import type { InvoiceOut } from "@/lib/api/client";
+import type { InvoiceOut, SendInvoiceIn } from "@/lib/api/client";
 import { InvoiceEditor } from "./editor/invoice-editor";
 import { applyServerErrors } from "./form-errors";
 import { toFormValues, toPayload } from "./form-mapping";
@@ -35,7 +35,9 @@ import { PreviewPane, PrintableInvoice } from "./preview/preview-pane";
 import { SaveStatus, type SaveState } from "./save-status";
 import { invoiceFormSchema, type InvoiceFormValues } from "./schema";
 import { StatusBadge } from "./status-badge";
-import { useDeleteInvoice, useSaveInvoice } from "./use-invoice-mutations";
+import { SendInvoiceDialog } from "./send-invoice-dialog";
+import { useTotals } from "./use-totals";
+import { useDeleteInvoice, useSaveInvoice, useSendInvoice } from "./use-invoice-mutations";
 
 type Props = {
   /** The saved invoice, or undefined for a new one. */
@@ -55,7 +57,9 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
   const { isDirty } = form.formState;
   const saveMutation = useSaveInvoice(invoice?.id);
   const deleteMutation = useDeleteInvoice();
+  const sendMutation = useSendInvoice();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
 
   // Navigation guard. `allowLeave` lets our own redirects (after create or delete) through.
   const allowLeave = useRef(false);
@@ -78,38 +82,73 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
-  const save = (afterSave?: () => void) =>
-    form.handleSubmit(
-      async (values) => {
-        try {
-          const saved = await saveMutation.mutateAsync(toPayload(values));
-          form.reset(toFormValues(saved));
-          if (afterSave) {
-            afterSave();
-          } else if (!invoice) {
-            allowLeave.current = true;
-            toast.success(`Invoice ${saved.number} created`);
-            navigate(`/invoices/${saved.id}`, { replace: true });
+  /** Validates and saves. Resolves to the saved invoice, or null when it couldn't be saved. */
+  const persist = () =>
+    new Promise<InvoiceOut | null>((resolve) => {
+      void form.handleSubmit(
+        async (values) => {
+          try {
+            const saved = await saveMutation.mutateAsync(toPayload(values));
+            form.reset(toFormValues(saved));
+            resolve(saved);
+          } catch (error) {
+            if (blocker.state === "blocked") blocker.reset();
+            if (applyServerErrors(error, form.setError)) {
+              toast.error("Some fields need attention", {
+                description: "The server rejected a value. Check the highlighted fields.",
+              });
+            } else {
+              toast.error("Couldn't save the invoice", {
+                description: error instanceof Error ? error.message : undefined,
+              });
+            }
+            resolve(null);
           }
-        } catch (error) {
+        },
+        () => {
+          // Close the leave dialog so the highlighted fields are visible.
           if (blocker.state === "blocked") blocker.reset();
-          if (applyServerErrors(error, form.setError)) {
-            toast.error("Some fields need attention", {
-              description: "The server rejected a value. Check the highlighted fields.",
-            });
-          } else {
-            toast.error("Couldn't save the invoice", {
-              description: error instanceof Error ? error.message : undefined,
-            });
-          }
-        }
-      },
-      () => {
-        // Close the leave dialog so the highlighted fields are visible.
-        if (blocker.state === "blocked") blocker.reset();
-        toast.error("Fix the highlighted fields to save");
-      },
-    )();
+          toast.error("Fix the highlighted fields to save");
+          resolve(null);
+        },
+      )();
+    });
+
+  /** After the first save, a new invoice moves to its own URL. */
+  const openSaved = (saved: InvoiceOut) => {
+    allowLeave.current = true;
+    navigate(`/invoices/${saved.id}`, { replace: true });
+  };
+
+  const save = async (afterSave?: () => void) => {
+    const saved = await persist();
+    if (!saved) return;
+    if (afterSave) {
+      afterSave();
+    } else if (!invoice) {
+      toast.success(`Invoice ${saved.number} created`);
+      openSaved(saved);
+    }
+  };
+
+  const send = async (body: SendInvoiceIn) => {
+    const target = invoice && !form.formState.isDirty ? invoice : await persist();
+    if (!target) {
+      setSendOpen(false);
+      return;
+    }
+    // Keep the URL in step with the saved invoice even if sending then fails.
+    if (!invoice) openSaved(target);
+    try {
+      const sent = await sendMutation.mutateAsync({ id: target.id, body });
+      setSendOpen(false);
+      toast.success(`Invoice ${sent.number} sent`, { description: `Sent to ${body.to}` });
+    } catch (error) {
+      toast.error("Couldn't send the invoice", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
 
   // Ctrl/Cmd+S saves from anywhere on the page.
   const saveRef = useRef(save);
@@ -190,7 +229,7 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
               <Button onClick={() => window.print()} className="hidden sm:inline-flex">
                 <Printer /> Print
               </Button>
-              <Button variant="primary">
+              <Button variant="primary" onClick={() => setSendOpen(true)}>
                 <Send /> Send
               </Button>
               <DropdownMenu>
@@ -243,6 +282,12 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
         </div>
       </div>
       <PrintableInvoice />
+      <ConnectedSendDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        needsSave={isDirty || !invoice}
+        onSend={send}
+      />
 
       <ConfirmDialog
         open={blocker.state === "blocked"}
@@ -272,6 +317,18 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
       />
     </FormProvider>
   );
+}
+
+/** The send dialog, fed with live form values. Lives inside the FormProvider. */
+function ConnectedSendDialog(props: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  needsSave: boolean;
+  onSend: (body: SendInvoiceIn) => Promise<void>;
+}) {
+  const values = useWatch<InvoiceFormValues>() as InvoiceFormValues;
+  const totals = useTotals();
+  return <SendInvoiceDialog {...props} invoice={values} totals={totals} />;
 }
 
 function InvoiceNumber() {

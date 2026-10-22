@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status
 
-from app.api.deps import InvoiceServiceDep
+from app.api.deps import InvoiceEmailServiceDep, InvoiceServiceDep
+from app.schemas.email import SendInvoiceIn
 from app.schemas.invoice import InvoiceIn, InvoiceOut, InvoiceSummary, NextNumberOut
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
@@ -34,3 +35,10 @@ def update_invoice(invoice_id: int, payload: InvoiceIn, service: InvoiceServiceD
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_invoice(invoice_id: int, service: InvoiceServiceDep) -> None:
     service.delete(invoice_id)
+
+
+@router.post("/{invoice_id}/send", response_model=InvoiceOut)
+async def send_invoice(
+    invoice_id: int, payload: SendInvoiceIn, service: InvoiceEmailServiceDep
+) -> InvoiceOut:
+    return await service.send(invoice_id, payload)

@@ -1,10 +1,11 @@
 import re
 from collections.abc import Callable
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
 from app.core.errors import BusinessRuleError, ConflictError, FieldIssue, NotFoundError
-from app.models import CustomField, Invoice, LineItem
+from app.models import CustomField, Invoice, InvoiceStatus, LineItem
 from app.repositories.invoice_repository import InvoiceRepository
 from app.schemas.invoice import (
     CustomFieldOut,
@@ -59,6 +60,13 @@ class InvoiceService:
         self._validate(data, exclude_id=invoice_id)
         self._apply(invoice, data)
         return self.to_out(self._persist(lambda: self.repository.save(invoice)))
+
+    def mark_sent(self, invoice_id: int, recipient: str, sent_at: datetime) -> InvoiceOut:
+        invoice = self._get_or_raise(invoice_id)
+        invoice.status = InvoiceStatus.SENT
+        invoice.sent_at = sent_at
+        invoice.last_sent_to = recipient
+        return self.to_out(self.repository.save(invoice))
 
     def delete(self, invoice_id: int) -> None:
         self.repository.delete(self._get_or_raise(invoice_id))

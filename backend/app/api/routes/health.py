@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.core.config import get_settings
+from app.api.deps import SettingsDep
 
 router = APIRouter(prefix="/api", tags=["health"])
 
@@ -12,5 +12,5 @@ class HealthOut(BaseModel):
 
 
 @router.get("/health", response_model=HealthOut)
-def health() -> HealthOut:
-    return HealthOut(status="ok", email_configured=get_settings().smtp_configured)
+def health(settings: SettingsDep) -> HealthOut:
+    return HealthOut(status="ok", email_configured=settings.smtp_configured)

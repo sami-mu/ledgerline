@@ -5,7 +5,6 @@ import { useTotals } from "../use-totals";
 import { InvoicePaper } from "./invoice-paper";
 
 const PAPER_WIDTH = 816; // US Letter at 96 dpi
-const GUTTER = 32;
 
 /** Live preview, scaled down to fit the available width. */
 export function PreviewPane() {
@@ -21,7 +20,9 @@ export function PreviewPane() {
     const paper = paperRef.current;
     if (!container || !paper) return;
     const observer = new ResizeObserver(() => {
-      const available = container.clientWidth - GUTTER * 2;
+      const style = getComputedStyle(container);
+      const available =
+        container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
       setScale(Math.min(1, Math.max(0.3, available / PAPER_WIDTH)));
       setPaperHeight(paper.offsetHeight);
     });
@@ -31,7 +32,7 @@ export function PreviewPane() {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex justify-center px-8 py-8">
+    <div ref={containerRef} className="flex justify-center px-4 py-5 sm:px-8 sm:py-8">
       <div style={{ width: PAPER_WIDTH * scale, height: paperHeight * scale }}>
         <div
           ref={paperRef}

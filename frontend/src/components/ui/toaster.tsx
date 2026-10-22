@@ -5,6 +5,7 @@ export function Toaster() {
     <Sonner
       position="bottom-right"
       gap={8}
+      mobileOffset={{ bottom: 72 }}
       toastOptions={{
         unstyled: true,
         classNames: {

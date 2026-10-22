@@ -3,7 +3,9 @@ import {
   ChevronRight,
   Copy,
   EllipsisVertical,
+  Eye,
   Menu,
+  PencilLine,
   Printer,
   Save,
   Send,
@@ -27,8 +29,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { InvoiceOut, SendInvoiceIn } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
 import { InvoiceEditor } from "./editor/invoice-editor";
 import { applyServerErrors } from "./form-errors";
+import { formatCents } from "./money";
 import { toFormValues, toPayload } from "./form-mapping";
 import { InvoiceListDrawer } from "./invoice-list-drawer";
 import { PreviewPane, PrintableInvoice } from "./preview/preview-pane";
@@ -60,6 +64,7 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
   const sendMutation = useSendInvoice();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [view, setView] = useState<PaneView>("edit");
 
   // Navigation guard. `allowLeave` lets our own redirects (after create or delete) through.
   const allowLeave = useRef(false);
@@ -217,13 +222,15 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
           }
           end={
             <>
-              <SaveStatus state={saveState} className="mr-1 hidden md:inline-flex" />
+              <SaveStatus state={saveState} className="mr-1 hidden lg:inline-flex" />
               <Tooltip content={`Save (${isMac ? "Cmd" : "Ctrl"}+S)`}>
                 <Button
                   onClick={() => void save()}
                   disabled={saveMutation.isPending || (!isDirty && !!invoice)}
+                  aria-label="Save"
+                  className="max-sm:w-8 max-sm:px-0"
                 >
-                  <Save /> Save
+                  <Save /> <span className="max-sm:sr-only">Save</span>
                 </Button>
               </Tooltip>
               <Button onClick={() => window.print()} className="hidden sm:inline-flex">
@@ -264,22 +271,32 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
           }
         />
 
-        <div className="flex min-h-0 flex-1">
+        <main className="flex min-h-0 flex-1">
+          {/* Side by side on large screens; one pane at a time below, switched from the bottom bar. */}
           <form
+            id="invoice-editor"
             noValidate
             onSubmit={(event) => {
               event.preventDefault();
               void save();
             }}
             aria-label="Invoice editor"
-            className="w-[clamp(460px,42vw,600px)] shrink-0 overflow-y-auto border-r border-line bg-surface"
+            className={cn(
+              "w-full shrink-0 overflow-y-auto bg-surface lg:w-[clamp(460px,42vw,600px)] lg:border-r lg:border-line",
+              view === "preview" && "max-lg:hidden",
+            )}
           >
             <InvoiceEditor />
           </form>
-          <section aria-label="Invoice preview" className="min-w-0 flex-1 overflow-y-auto">
+          <section
+            aria-label="Invoice preview"
+            className={cn("min-w-0 flex-1 overflow-y-auto", view === "edit" && "max-lg:hidden")}
+          >
             <PreviewPane />
           </section>
-        </div>
+        </main>
+
+        <MobileBar view={view} onViewChange={setView} saveState={saveState} />
       </div>
       <PrintableInvoice />
       <ConnectedSendDialog
@@ -316,6 +333,46 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
         onConfirm={() => void deleteInvoice()}
       />
     </FormProvider>
+  );
+}
+
+type PaneView = "edit" | "preview";
+
+/** Bottom bar on small screens: switch between editing and the preview, see save state. */
+function MobileBar({
+  view,
+  onViewChange,
+  saveState,
+}: {
+  view: PaneView;
+  onViewChange: (view: PaneView) => void;
+  saveState: SaveState;
+}) {
+  const totals = useTotals();
+  return (
+    <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-line bg-surface px-3 lg:hidden">
+      <div role="group" aria-label="Show" className="flex rounded-md bg-sunken p-0.5">
+        {(["edit", "preview"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={view === option}
+            onClick={() => onViewChange(option)}
+            className={cn(
+              "flex h-8 items-center gap-1.5 rounded-sm px-3 text-[13px] font-medium text-ink-2 transition-colors",
+              view === option && "bg-surface text-ink shadow-[0_1px_2px_rgb(14_18_23/0.12)]",
+            )}
+          >
+            {option === "edit" ? <PencilLine className="size-3.5" /> : <Eye className="size-3.5" />}
+            {option === "edit" ? "Edit" : "Preview"}
+          </button>
+        ))}
+      </div>
+      <div className="flex min-w-0 flex-col items-end">
+        <span className="num text-[13px] font-medium">{formatCents(totals.total)}</span>
+        <SaveStatus state={saveState} className="text-2xs" />
+      </div>
+    </div>
   );
 }
 

@@ -121,3 +121,33 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/*
+ * Print: only the invoice. The app chrome carries print:hidden, and PrintableInvoice renders
+ * an unscaled copy. Page margins come from @page so they repeat on every page.
+ */
+@page {
+  size: letter;
+  margin: 0.5in 0.6in;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+
+  .invoice-paper {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  [data-sonner-toaster] {
+    display: none;
+  }
+}

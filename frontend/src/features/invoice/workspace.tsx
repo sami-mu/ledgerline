@@ -6,6 +6,7 @@ import { TopBar } from "@/components/app/top-bar";
 import { Button } from "@/components/ui/button";
 import type { InvoiceOut } from "@/lib/api/client";
 import { InvoiceEditor } from "./editor/invoice-editor";
+import { PreviewPane, PrintableInvoice } from "./preview/preview-pane";
 import { invoiceFormSchema, type InvoiceFormValues } from "./schema";
 
 type Props = {
@@ -23,7 +24,7 @@ export function InvoiceWorkspace({ defaultValues }: Props) {
 
   return (
     <FormProvider {...form}>
-      <div className="flex h-dvh flex-col">
+      <div className="flex h-dvh flex-col print:hidden">
         <TopBar
           start={
             <>
@@ -55,11 +56,12 @@ export function InvoiceWorkspace({ defaultValues }: Props) {
           >
             <InvoiceEditor />
           </form>
-          <section aria-label="Invoice preview" className="min-w-0 flex-1 overflow-y-auto p-8">
-            Preview
+          <section aria-label="Invoice preview" className="min-w-0 flex-1 overflow-y-auto">
+            <PreviewPane />
           </section>
         </div>
       </div>
+      <PrintableInvoice />
     </FormProvider>
   );
 }

@@ -114,6 +114,20 @@
   letter-spacing: -0.01em;
 }
 
+/*
+ * Scrollable panes. They are positioned so absolutely placed children (sr-only labels, for
+ * one) stay inside them instead of stretching the page. Scrollbars are thin and quiet.
+ */
+@utility scroll-pane {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+
+  &:hover {
+    scrollbar-color: var(--color-ink-4) transparent;
+  }
+}
+
 @utility label-caps {
   font-size: var(--text-2xs);
   line-height: var(--text-2xs--line-height);

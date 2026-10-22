@@ -282,7 +282,7 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
             }}
             aria-label="Invoice editor"
             className={cn(
-              "w-full shrink-0 overflow-y-auto bg-surface lg:w-[clamp(460px,42vw,600px)] lg:border-r lg:border-line",
+              "relative w-full shrink-0 scroll-pane overflow-y-auto bg-surface lg:w-[clamp(460px,42vw,600px)] lg:border-r lg:border-line",
               view === "preview" && "max-lg:hidden",
             )}
           >
@@ -290,7 +290,10 @@ export function InvoiceWorkspace({ invoice, defaultValues }: Props) {
           </form>
           <section
             aria-label="Invoice preview"
-            className={cn("min-w-0 flex-1 overflow-y-auto", view === "edit" && "max-lg:hidden")}
+            className={cn(
+              "relative min-w-0 flex-1 scroll-pane overflow-y-auto",
+              view === "edit" && "max-lg:hidden",
+            )}
           >
             <PreviewPane />
           </section>

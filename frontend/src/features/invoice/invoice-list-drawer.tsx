@@ -51,7 +51,7 @@ export function InvoiceListDrawer({ activeId }: { activeId?: number }) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="relative min-h-0 flex-1 scroll-pane overflow-y-auto">
         {invoices.isPending ? (
           <ul aria-label="Loading invoices" className="flex flex-col">
             {Array.from({ length: 5 }, (_, i) => (

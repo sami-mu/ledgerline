@@ -1,1 +1,123 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens. "Precise ledger": cool paper, ink text, one ink-green accent.
+ * The default Tailwind palette is removed so only these tokens can be used.
+ */
+@theme {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+
+  --color-canvas: #eef1f4;
+  --color-surface: #ffffff;
+  --color-subtle: #f6f8fa;
+  --color-sunken: #e7ebef;
+
+  --color-ink: #0e1217;
+  --color-ink-2: #3a434e;
+  --color-ink-3: #5f6975;
+  --color-ink-4: #8a939d;
+
+  --color-line: #e1e5ea;
+  --color-line-strong: #c9d0d8;
+
+  --color-accent: #145a3f;
+  --color-accent-hover: #0f4732;
+  --color-accent-soft: #e6f0eb;
+  --color-accent-ink: #0d3d2b;
+
+  --color-danger: #b42318;
+  --color-danger-soft: #fdeeec;
+  --color-warning: #8a5a00;
+  --color-warning-soft: #fbf3e2;
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+
+  --shadow-paper: 0 1px 2px rgb(14 18 23 / 0.06), 0 8px 24px -12px rgb(14 18 23 / 0.18);
+  --shadow-pop: 0 1px 2px rgb(14 18 23 / 0.08), 0 12px 32px -8px rgb(14 18 23 / 0.22);
+
+  --animate-fade-in: fade-in 140ms ease-out;
+  --animate-slide-in-left: slide-in-left 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-12px);
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      transform: translateY(4px) scale(0.985);
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-sm text-ink;
+    font-feature-settings: "ss02";
+  }
+
+  ::selection {
+    @apply bg-accent-soft text-accent-ink;
+  }
+
+  /* One focus style for the whole app: visible, on-brand, keyboard only. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+}
+
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 0;
+  letter-spacing: -0.01em;
+}
+
+@utility label-caps {
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

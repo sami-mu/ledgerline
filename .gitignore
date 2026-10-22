@@ -27,3 +27,4 @@ dist/
 
 # Local AI working notes (references private projects)
 CLAUDE.md
+.claude/

@@ -17,6 +17,7 @@ type FieldProps = {
   className?: string;
   /** Visually hide the label but keep it for screen readers (dense table rows). */
   srOnlyLabel?: boolean;
+  labelClassName?: string;
   children: ReactElement<ControlProps>;
 };
 
@@ -28,6 +29,7 @@ export function Field({
   optional,
   className,
   srOnlyLabel,
+  labelClassName,
   children,
 }: FieldProps) {
   const autoId = useId();
@@ -38,7 +40,7 @@ export function Field({
 
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <Label htmlFor={id} className={cn(srOnlyLabel && "sr-only")}>
+      <Label htmlFor={id} className={cn(srOnlyLabel && "sr-only", labelClassName)}>
         {label}
         {optional && <span className="ml-1 font-normal text-ink-3">optional</span>}
       </Label>

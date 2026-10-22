@@ -92,11 +92,6 @@
     outline-offset: 2px;
   }
 
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 0.55;
-    cursor: pointer;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

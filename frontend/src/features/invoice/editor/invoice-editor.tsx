@@ -1,19 +1,22 @@
 import { AdjustmentsEditor } from "./adjustments-editor";
 import { CustomFieldsEditor } from "./custom-fields-editor";
 import { EditorSection } from "./editor-section";
-import { TextAreaField, TextField } from "./form-fields";
+import { useWatch } from "react-hook-form";
+import type { InvoiceFormValues } from "../schema";
+import { DateField, TextAreaField, TextField } from "./form-fields";
 import { LineItemsEditor } from "./line-items-editor";
 import { useDependentValidation } from "./use-dependent-validation";
 
 export function InvoiceEditor() {
   useDependentValidation();
+  const issueDate = useWatch<InvoiceFormValues, "issue_date">({ name: "issue_date" });
   return (
     <div className="@container">
       <EditorSection id="details" title="Invoice">
         <div className="grid grid-cols-1 gap-3 @sm:grid-cols-3">
           <TextField name="number" label="Invoice number" autoComplete="off" spellCheck={false} />
-          <TextField name="issue_date" label="Issue date" type="date" />
-          <TextField name="due_date" label="Due date" type="date" />
+          <DateField name="issue_date" label="Issue date" />
+          <DateField name="due_date" label="Due date" min={issueDate} />
         </div>
       </EditorSection>
 

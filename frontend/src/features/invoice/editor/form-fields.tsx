@@ -1,5 +1,6 @@
 import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
 import { Controller, useFormContext, type FieldPath } from "react-hook-form";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,5 +150,36 @@ function AffixInput({
         </span>
       )}
     </div>
+  );
+}
+
+/** Calendar date picker bound to an ISO "YYYY-MM-DD" form value. */
+export function DateField({
+  name,
+  label,
+  hint,
+  optional,
+  className,
+  min,
+}: Common & { min?: string }) {
+  const { control } = useFormContext<InvoiceFormValues>();
+  const error = useFieldError(name);
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <Field label={label} hint={hint} optional={optional} error={error} className={className}>
+          <DatePicker
+            ref={field.ref}
+            name={field.name}
+            value={String(field.value ?? "")}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            min={min}
+          />
+        </Field>
+      )}
+    />
   );
 }
